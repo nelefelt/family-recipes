@@ -1,0 +1,5 @@
+﻿specification/
+.env
+
+bin/
+obj/
