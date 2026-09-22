@@ -1,5 +1,7 @@
-﻿specification/
+specification/
+family-recipes-web/specification/
 .env
+.cursor/rules/dotnet-development.mdc
 
 bin/
 obj/

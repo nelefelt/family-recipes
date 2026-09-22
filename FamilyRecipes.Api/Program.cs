@@ -3,7 +3,9 @@ using FamilyRecipes.Api.Exceptions;
 using FamilyRecipes.Api.Logging;
 using FamilyRecipes.Api.Repositories;
 using FamilyRecipes.Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Web;
 using Serilog;
 
 LoggingExtensions.CreateBootstrapLogger();
@@ -24,6 +26,13 @@ try
 
     builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
     builder.Services.AddScoped<IRecipeService, RecipeService>();
+
+    builder.Services
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApi(
+            builder.Configuration.GetSection("AzureAd"));
+
+    builder.Services.AddAuthorization();
 
     var app = builder.Build();
 
@@ -46,6 +55,9 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     app.MapControllers();
 
