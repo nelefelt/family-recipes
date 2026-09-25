@@ -5,12 +5,12 @@ import {
   PublicClientApplication,
   type IPublicClientApplication,
 } from "@azure/msal-browser";
-import { msalConfig } from "@/lib/auth/auth-config";
+import { msalConfig } from "@/features/auth/auth-config";
 import { useEffect, useState, type ReactNode } from "react";
 
 let msalInstancePromise: Promise<IPublicClientApplication> | undefined;
 
-function getMsalInstance(): Promise<IPublicClientApplication> {
+const getMsalInstance = (): Promise<IPublicClientApplication> => {
   if (!msalInstancePromise) {
     msalInstancePromise = (async () => {
       const pca = new PublicClientApplication(msalConfig);
@@ -20,7 +20,7 @@ function getMsalInstance(): Promise<IPublicClientApplication> {
   }
 
   return msalInstancePromise;
-}
+};
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -35,19 +35,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let isMounted = true;
 
-    getMsalInstance()
-      .then((msalInstance) => {
+    const initializeAuth = async () => {
+      try {
+        const msalInstance = await getMsalInstance();
+
         if (isMounted) {
           setInstance(msalInstance);
         }
-      })
-      .catch(() => {
+      } catch {
         if (isMounted) {
           setErrorMessage(
             "Authentication could not be started. Please refresh the page."
           );
         }
-      });
+      }
+    };
+
+    void initializeAuth();
 
     return () => {
       isMounted = false;

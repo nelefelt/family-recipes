@@ -1,12 +1,12 @@
 import { BrowserCacheLocation, type Configuration } from "@azure/msal-browser";
 
-function requireEnv(value: string | undefined, name: string): string {
+const requireEnv = (value: string | undefined, name: string): string => {
   if (value === undefined) {
     throw new Error(`Missing environment variable: ${name}`);
   }
 
   return value;
-}
+};
 
 const clientId = requireEnv(
   process.env.NEXT_PUBLIC_MSAL_CLIENT_ID,
@@ -26,7 +26,12 @@ export const apiScope = requireEnv(
   "NEXT_PUBLIC_API_SCOPE"
 );
 
-function getKnownAuthorities(authorityUrl: string): string[] {
+export const apiBaseUrl = requireEnv(
+  process.env.NEXT_PUBLIC_API_BASE_URL,
+  "NEXT_PUBLIC_API_BASE_URL"
+);
+
+const getKnownAuthorities = (authorityUrl: string): string[] => {
   const url = new URL(authorityUrl);
   const knownAuthorities = [url.hostname];
   const tenantSegment = url.pathname.split("/").filter(Boolean)[0];
@@ -39,7 +44,7 @@ function getKnownAuthorities(authorityUrl: string): string[] {
   }
 
   return knownAuthorities;
-}
+};
 
 export const msalConfig: Configuration = {
   auth: {

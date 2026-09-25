@@ -8,11 +8,20 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
+        builder.Property(user => user.ExternalTenantId)
+            .IsRequired()
+            .HasMaxLength(36);
+
         builder.Property(user => user.ExternalUserId)
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(36);
 
-        builder.HasIndex(user => user.ExternalUserId)
+        builder
+            .HasIndex(user => new
+            {
+                user.ExternalTenantId,
+                user.ExternalUserId
+            })
             .IsUnique();
 
         builder.Property(user => user.Name)

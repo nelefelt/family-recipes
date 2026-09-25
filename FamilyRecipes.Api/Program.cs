@@ -1,3 +1,4 @@
+using FamilyRecipes.Api.Authentication;
 using FamilyRecipes.Api.Data;
 using FamilyRecipes.Api.Exceptions;
 using FamilyRecipes.Api.Logging;
@@ -25,7 +26,15 @@ try
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
     builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
+    builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IRecipeService, RecipeService>();
+    builder.Services.AddScoped<IUserService, UserService>();
+
+    builder.Services.AddHttpContextAccessor();
+
+    builder.Services.AddScoped<
+        ICurrentUserContext,
+        CurrentUserContext>();
 
     builder.Services
         .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -33,6 +42,17 @@ try
             builder.Configuration.GetSection("AzureAd"));
 
     builder.Services.AddAuthorization();
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Frontend", policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+    });
 
     var app = builder.Build();
 
@@ -55,7 +75,7 @@ try
     }
 
     app.UseHttpsRedirection();
-
+    app.UseCors("Frontend");
     app.UseAuthentication();
     app.UseAuthorization();
 

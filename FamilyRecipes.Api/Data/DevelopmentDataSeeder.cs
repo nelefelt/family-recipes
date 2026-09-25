@@ -19,6 +19,7 @@ public static class DevelopmentDataSeeder
 
         var user = new User
         {
+            ExternalTenantId = "development",
             ExternalUserId = SeedExternalUserId,
             Name = "Andreas"
         };
