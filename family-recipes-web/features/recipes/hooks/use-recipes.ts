@@ -1,21 +1,20 @@
 "use client";
 
 import { useMsal } from "@azure/msal-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiScope } from "@/features/auth/lib/auth-config";
-import { createRecipe } from "@/features/recipes/api/create-recipe";
-import type { CreateRecipeRequest } from "@/features/recipes/types/recipe";
+import { getRecipes } from "@/features/recipes/api/get-recipes";
 
-export const useCreateRecipe = () => {
+export const useRecipes = () => {
   const { instance, accounts } = useMsal();
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (request: CreateRecipeRequest) => {
+  return useQuery({
+    queryKey: ["recipes"],
+    queryFn: async () => {
       const account = instance.getActiveAccount() ?? accounts[0];
 
       if (!account) {
-        throw new Error("Du behöver logga in för att skapa recept.");
+        throw new Error("Du behöver logga in för att se recepten.");
       }
 
       const tokenResponse = await instance
@@ -29,8 +28,7 @@ export const useCreateRecipe = () => {
           });
         });
 
-      return createRecipe(request, tokenResponse.accessToken);
+      return getRecipes(tokenResponse.accessToken);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recipes"] }),
   });
 };

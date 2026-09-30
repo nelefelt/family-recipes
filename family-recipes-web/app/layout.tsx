@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Newsreader } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/features/auth/auth-provider";
+import { AuthProvider } from "@/features/auth/components/auth-provider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -16,8 +16,8 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Familjerecept",
-  description: "Familjens recept, samlade på ett ställe.",
+  title: "Nelefelts recept",
+  description: "Familjen Nelefelts recept, samlade på ett ställe.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

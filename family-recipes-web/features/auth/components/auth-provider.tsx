@@ -10,8 +10,8 @@ import {
   type IPublicClientApplication,
 } from "@azure/msal-browser";
 import { AppLoadingScreen } from "@/components/app/app-loading-screen";
-import { msalConfig } from "@/features/auth/auth-config";
-import { saveLoginError } from "@/features/auth/login-error";
+import { msalConfig } from "@/features/auth/lib/auth-config";
+import { saveLoginError } from "@/features/auth/lib/login-error";
 import { useEffect, useState, type ReactNode } from "react";
 
 let msalInstancePromise: Promise<IPublicClientApplication> | undefined;

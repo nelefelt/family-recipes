@@ -3,7 +3,7 @@
 import { InteractionStatus } from "@azure/msal-browser";
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 import { useQuery } from "@tanstack/react-query";
-import { apiScope } from "@/features/auth/auth-config";
+import { apiScope } from "@/features/auth/lib/auth-config";
 import { getOrCreateCurrentUser } from "@/features/users/api/get-or-create-current-user";
 
 export const useCurrentUser = () => {

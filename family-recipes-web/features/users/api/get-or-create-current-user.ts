@@ -1,4 +1,4 @@
-import { apiBaseUrl } from "@/features/auth/auth-config";
+import { apiBaseUrl } from "@/features/auth/lib/auth-config";
 import type { User } from "@/features/users/types/user";
 
 export const getOrCreateCurrentUser = async (

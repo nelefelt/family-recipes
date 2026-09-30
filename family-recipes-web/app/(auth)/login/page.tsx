@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { GuestGuard } from "@/features/auth/guest-guard";
-import { LoginScreen } from "@/features/auth/login-screen";
-import { getSafeReturnUrl } from "@/features/auth/return-url";
+import { GuestGuard } from "@/features/auth/components/guest-guard";
+import { LoginScreen } from "@/features/auth/components/login-screen";
+import { getSafeReturnUrl } from "@/features/auth/lib/return-url";
 
 export const metadata: Metadata = {
-  title: "Logga in · Familjerecept",
+  title: "Logga in · Nelefelts recept",
 };
 
 interface LoginPageProps {

@@ -12,6 +12,8 @@ public class RecipeRepository(AppDbContext dbContext) : IRecipeRepository
             .AsNoTracking()
             .Include(recipe => recipe.CreatedByUser)
             .Include(recipe => recipe.Ingredients)
+            .OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenByDescending(recipe => recipe.Id)
             .ToListAsync(cancellationToken);
     }
 

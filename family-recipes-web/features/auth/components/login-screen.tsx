@@ -7,8 +7,8 @@ import { useMsal } from "@azure/msal-react";
 import { ChefHat, CircleAlert, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { loginRequest } from "@/features/auth/auth-config";
-import { clearLoginError, readLoginError } from "@/features/auth/login-error";
+import { loginRequest } from "@/features/auth/lib/auth-config";
+import { clearLoginError, readLoginError } from "@/features/auth/lib/login-error";
 
 interface LoginScreenProps {
   returnUrl: string;
@@ -46,7 +46,7 @@ export const LoginScreen = ({ returnUrl }: LoginScreenProps) => {
         <div className="flex size-14 items-center justify-center rounded-2xl bg-secondary text-primary shadow-sm ring-1 ring-primary/5">
           <ChefHat aria-hidden="true" className="size-7" />
         </div>
-        <p className="mt-4 text-sm font-semibold tracking-tight text-foreground">Familjerecept</p>
+        <p className="mt-4 text-sm font-semibold tracking-tight text-foreground">Nelefelts recept</p>
 
         <h1 className="mt-10 font-heading text-4xl leading-[1.1] font-medium tracking-tight text-balance text-foreground">
           Familjens smaker, samlade.
