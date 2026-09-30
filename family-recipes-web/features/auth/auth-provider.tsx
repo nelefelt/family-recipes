@@ -1,11 +1,17 @@
 "use client";
 
+// Startar MSAL och gör autentiseringsinformationen tillgänglig i hela appen.
+
 import { MsalProvider } from "@azure/msal-react";
 import {
+  EventType,
+  InteractionType,
   PublicClientApplication,
   type IPublicClientApplication,
 } from "@azure/msal-browser";
+import { AppLoadingScreen } from "@/components/app/app-loading-screen";
 import { msalConfig } from "@/features/auth/auth-config";
+import { saveLoginError } from "@/features/auth/login-error";
 import { useEffect, useState, type ReactNode } from "react";
 
 let msalInstancePromise: Promise<IPublicClientApplication> | undefined;
@@ -15,6 +21,15 @@ const getMsalInstance = (): Promise<IPublicClientApplication> => {
     msalInstancePromise = (async () => {
       const pca = new PublicClientApplication(msalConfig);
       await pca.initialize();
+      // Must be registered before MsalProvider runs handleRedirectPromise, which swallows redirect errors.
+      pca.addEventCallback((message) => {
+        if (
+          message.eventType === EventType.ACQUIRE_TOKEN_FAILURE &&
+          message.interactionType === InteractionType.Redirect
+        ) {
+          saveLoginError(message.error);
+        }
+      });
       return pca;
     })();
   }
@@ -45,7 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } catch {
         if (isMounted) {
           setErrorMessage(
-            "Authentication could not be started. Please refresh the page."
+            "Inloggningen kunde inte startas. Ladda om sidan och försök igen."
           );
         }
       }
@@ -59,15 +74,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   if (errorMessage) {
-    return <p role="alert">{errorMessage}</p>;
+    return (
+      <p role="alert" className="m-auto max-w-sm px-6 text-center text-sm text-destructive">
+        {errorMessage}
+      </p>
+    );
   }
 
   if (!instance) {
-    return (
-      <p role="status" aria-live="polite">
-        Loading authentication...
-      </p>
-    );
+    return <AppLoadingScreen />;
   }
 
   return <MsalProvider instance={instance}>{children}</MsalProvider>;

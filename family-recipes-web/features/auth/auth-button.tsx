@@ -1,5 +1,7 @@
 "use client";
 
+// Visar utloggningsknappen i headern och startar utloggningen.
+
 import { useState } from "react";
 import { InteractionStatus } from "@azure/msal-browser";
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";

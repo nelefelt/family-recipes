@@ -1,3 +1,5 @@
+// Innehåller MSAL-konfigurationen: app-ID, tenant, scopes och redirect-adresser.
+
 import { BrowserCacheLocation, type Configuration } from "@azure/msal-browser";
 
 const requireEnv = (value: string | undefined, name: string): string => {
@@ -52,7 +54,7 @@ export const msalConfig: Configuration = {
     authority,
     knownAuthorities: getKnownAuthorities(authority),
     redirectUri,
-    postLogoutRedirectUri: redirectUri,
+    postLogoutRedirectUri: new URL("/login", redirectUri).toString(),
   },
   cache: {
     cacheLocation: BrowserCacheLocation.SessionStorage,
