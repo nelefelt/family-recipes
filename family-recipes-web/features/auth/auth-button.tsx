@@ -42,9 +42,9 @@ export function AuthButton() {
   };
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    <div className="flex items-center gap-2">
       {errorMessage ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="max-w-40 text-xs text-destructive">
           {errorMessage}
         </p>
       ) : null}
@@ -52,14 +52,21 @@ export function AuthButton() {
       {isAuthenticated ? (
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
+          className="h-11 px-3.5"
           onClick={() => void handleLogout()}
           disabled={isBusy}
         >
           Logga ut
         </Button>
       ) : (
-        <Button type="button" onClick={() => void handleLogin()} disabled={isBusy}>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 px-3.5"
+          onClick={() => void handleLogin()}
+          disabled={isBusy}
+        >
           Logga in
         </Button>
       )}

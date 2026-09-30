@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Serilog;
+using System.Text.Json.Serialization;
 
 LoggingExtensions.CreateBootstrapLogger();
 
@@ -17,8 +18,25 @@ try
 
     builder.Host.UseAppSerilog();
 
-    builder.Services.AddOpenApi();
-    builder.Services.AddControllers();
+    builder.Services.AddOpenApi(options =>
+        options.AddOperationTransformer((operation, _, _) =>
+        {
+            // JWT Bearer challenge and forbid responses have no body.
+            foreach (var (statusCode, response) in operation.Responses ?? [])
+            {
+                if (statusCode is "401" or "403")
+                {
+                    response.Content?.Clear();
+                }
+            }
+
+            return Task.CompletedTask;
+        }));
+    builder.Services.ConfigureHttpJsonOptions(options =>
+        options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+            options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict);
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
     builder.Services.AddProblemDetails();
 
