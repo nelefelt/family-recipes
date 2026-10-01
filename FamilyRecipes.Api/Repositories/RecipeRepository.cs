@@ -26,9 +26,21 @@ public class RecipeRepository(AppDbContext dbContext) : IRecipeRepository
             .FirstOrDefaultAsync(recipe => recipe.Id == id, cancellationToken);
     }
 
+    public Task<Recipe?> GetByIdForUpdateAsync(int id, CancellationToken cancellationToken)
+    {
+        return dbContext.Recipes
+            .Include(recipe => recipe.Ingredients)
+            .FirstOrDefaultAsync(recipe => recipe.Id == id, cancellationToken);
+    }
+
     public async Task AddAsync(Recipe recipe, CancellationToken cancellationToken)
     {
         await dbContext.Recipes.AddAsync(recipe, cancellationToken);
+    }
+
+    public void Delete(Recipe recipe)
+    {
+        dbContext.Recipes.Remove(recipe);
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)

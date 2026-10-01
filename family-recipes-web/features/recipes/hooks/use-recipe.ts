@@ -3,7 +3,8 @@
 import { useMsal } from "@azure/msal-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccessToken } from "@/features/auth/lib/get-access-token";
-import { getRecipe, RecipeRequestError } from "@/features/recipes/api/get-recipe";
+import { getRecipe } from "@/features/recipes/api/get-recipe";
+import { RecipeRequestError } from "@/features/recipes/api/recipe-request-error";
 import { recipeKeys } from "@/features/recipes/recipe-keys";
 import type { RecipeResponse } from "@/features/recipes/types/recipe";
 

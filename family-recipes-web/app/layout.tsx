@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <QueryProvider>
           <AuthProvider>{children}</AuthProvider>
         </QueryProvider>
-        <Toaster position="top-center" />
+        <Toaster position="top-center" duration={2500} />
       </body>
     </html>
   );

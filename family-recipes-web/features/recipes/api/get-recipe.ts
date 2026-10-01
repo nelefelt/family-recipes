@@ -1,15 +1,6 @@
 import { apiClient } from "@/lib/api/client";
+import { RecipeRequestError } from "@/features/recipes/api/recipe-request-error";
 import type { RecipeResponse } from "@/features/recipes/types/recipe";
-
-export class RecipeRequestError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string, cause?: unknown) {
-    super(message, { cause });
-    this.name = "RecipeRequestError";
-    this.status = status;
-  }
-}
 
 export const getRecipe = async (recipeId: number, accessToken: string): Promise<RecipeResponse> => {
   const { data, error, response } = await apiClient

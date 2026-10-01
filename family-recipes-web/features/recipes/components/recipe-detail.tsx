@@ -1,11 +1,14 @@
 "use client";
 
-import { CircleAlert } from "lucide-react";
+import { ArrowLeft, CircleAlert } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { RecipeRequestError } from "@/features/recipes/api/get-recipe";
+import { RecipeRequestError } from "@/features/recipes/api/recipe-request-error";
+import { RecipeActions } from "@/features/recipes/components/recipe-actions";
 import { RecipeView } from "@/features/recipes/components/recipe-view";
 import { useRecipe } from "@/features/recipes/hooks/use-recipe";
+import { useCurrentUser } from "@/features/users/hooks/use-current-user";
 
 interface RecipeDetailProps {
   recipeId: number;
@@ -13,9 +16,13 @@ interface RecipeDetailProps {
 
 export const RecipeDetail = ({ recipeId }: RecipeDetailProps) => {
   const { data: recipe, error, isPending, isRefetching, refetch } = useRecipe(recipeId);
+  const { data: currentUser } = useCurrentUser();
+  const isOwner = recipe !== undefined && currentUser?.id === recipe.createdByUserId;
+
+  let content: ReactNode;
 
   if (isPending) {
-    return (
+    content = (
       <div aria-busy="true" className="flex flex-col gap-4">
         <span className="sr-only">Laddar recept...</span>
         <div aria-hidden="true" className="flex flex-col gap-3">
@@ -27,10 +34,8 @@ export const RecipeDetail = ({ recipeId }: RecipeDetailProps) => {
         <div aria-hidden="true" className="h-56 animate-pulse rounded-3xl bg-card ring-1 ring-border/50" />
       </div>
     );
-  }
-
-  if (error instanceof RecipeRequestError && error.status === 404) {
-    return (
+  } else if (error instanceof RecipeRequestError && error.status === 404) {
+    content = (
       <div className="flex flex-col items-start gap-3 rounded-3xl bg-card px-6 py-10 shadow-sm ring-1 ring-border/50">
         <h1 className="font-heading text-3xl font-medium tracking-tight text-foreground">Receptet finns inte</h1>
         <p className="text-sm text-muted-foreground">Det kan ha tagits bort, eller så är länken fel.</p>
@@ -39,10 +44,8 @@ export const RecipeDetail = ({ recipeId }: RecipeDetailProps) => {
         </Button>
       </div>
     );
-  }
-
-  if (error || recipe === undefined) {
-    return (
+  } else if (error || recipe === undefined) {
+    content = (
       <div
         role="alert"
         className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-4 text-sm text-destructive"
@@ -62,7 +65,23 @@ export const RecipeDetail = ({ recipeId }: RecipeDetailProps) => {
         </Button>
       </div>
     );
+  } else {
+    content = <RecipeView recipe={recipe} />;
   }
 
-  return <RecipeView recipe={recipe} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex h-11 items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="-ml-2.5 inline-flex h-11 items-center gap-1.5 rounded-full pr-3 pl-2.5 text-sm font-medium text-foreground outline-none transition-colors hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/40"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Alla recept
+        </Link>
+        {isOwner ? <RecipeActions recipeId={recipe.id} recipeTitle={recipe.title} /> : null}
+      </div>
+      {content}
+    </div>
+  );
 };

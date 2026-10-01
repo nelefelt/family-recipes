@@ -86,10 +86,6 @@ try
             options.SwaggerEndpoint("/openapi/v1.json", "v1");
             options.RoutePrefix = "swagger";
         });
-
-        await using var scope = app.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await DevelopmentDataSeeder.SeedAsync(dbContext, app.Lifetime.ApplicationStopping);
     }
 
     app.UseHttpsRedirection();

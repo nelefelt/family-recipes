@@ -43,4 +43,14 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
 
         return CreatedAtAction(nameof(GetRecipeById), new { recipeId = recipe.Id }, recipe);
     }
+
+    [HttpDelete("{recipeId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteRecipe(int recipeId, CancellationToken cancellationToken)
+    {
+        await recipeService.DeleteRecipeAsync(recipeId, cancellationToken);
+
+        return NoContent();
+    }
 }

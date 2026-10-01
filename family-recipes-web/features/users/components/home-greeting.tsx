@@ -12,7 +12,7 @@ export function HomeGreeting() {
       <h1 className="font-heading text-4xl leading-tight font-medium tracking-tight text-foreground md:text-5xl">
         {firstName ? `${greeting}, ${firstName}` : greeting}
       </h1>
-      <p className="text-base text-muted-foreground md:text-lg">Vad blir det för mat idag?</p>
+      <p className="text-[17px] text-foreground/80 md:text-lg">Vad blir det för mat idag?</p>
     </div>
   );
 }

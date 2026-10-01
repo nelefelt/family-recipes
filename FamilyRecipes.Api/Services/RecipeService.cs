@@ -32,6 +32,26 @@ public class RecipeService(
         return recipe.ToResponse();
     }
 
+    public async Task DeleteRecipeAsync(int id, CancellationToken cancellationToken)
+    {
+        var recipe = await recipeRepository.GetByIdForUpdateAsync(id, cancellationToken);
+
+        if (recipe is null)
+        {
+            throw new RecipeNotFoundException(id);
+        }
+
+        var currentUser = await userService.GetOrCreateCurrentAsync(cancellationToken);
+
+        if (recipe.CreatedByUserId != currentUser.Id)
+        {
+            throw new RecipeForbiddenException(id);
+        }
+
+        recipeRepository.Delete(recipe);
+        await recipeRepository.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<RecipeResponse> CreateRecipeAsync(CreateRecipeRequest request, CancellationToken cancellationToken)
     {
         var user = await userService.GetOrCreateCurrentAsync(cancellationToken);

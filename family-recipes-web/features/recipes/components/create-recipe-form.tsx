@@ -12,6 +12,7 @@ import { IngredientFormRow } from "@/features/recipes/components/ingredient-form
 import { useCreateRecipe } from "@/features/recipes/hooks/use-create-recipe";
 import { toCreateRecipeRequest } from "@/features/recipes/mappers/to-create-recipe-request";
 import { createRecipeSchema, type CreateRecipeFormValues } from "@/features/recipes/schemas/create-recipe-schema";
+import { toastTitleMaxLength, truncateText } from "@/lib/truncate-text";
 
 const createEmptyIngredient = (): CreateRecipeFormValues["ingredients"][number] => ({
   amount: "",
@@ -51,7 +52,7 @@ export const CreateRecipeForm = () => {
       const recipe = await createRecipeMutation.mutateAsync(toCreateRecipeRequest(values));
       reset();
       toast.success("Receptet har skapats", {
-        description: `"${recipe.title}" finns nu bland familjens recept.`,
+        description: `"${truncateText(recipe.title, toastTitleMaxLength)}" finns nu bland familjens recept.`,
       });
     } catch {
       // The error is rendered from the mutation state.
