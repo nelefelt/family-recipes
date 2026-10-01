@@ -81,7 +81,13 @@ export const RecipeList = () => {
     <ul className={gridClassName}>
       {recipes.map((recipe) => (
         <li key={recipe.id}>
-          <RecipeCard recipe={recipe} />
+          <Link
+            href={`/recipes/${recipe.id}`}
+            aria-labelledby={`recipe-title-${recipe.id}`}
+            className="group block h-full rounded-3xl outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+          >
+            <RecipeCard recipe={recipe} />
+          </Link>
         </li>
       ))}
     </ul>

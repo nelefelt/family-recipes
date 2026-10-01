@@ -2,33 +2,19 @@
 
 import { useMsal } from "@azure/msal-react";
 import { useQuery } from "@tanstack/react-query";
-import { apiScope } from "@/features/auth/lib/auth-config";
+import { getAccessToken } from "@/features/auth/lib/get-access-token";
 import { getRecipes } from "@/features/recipes/api/get-recipes";
+import { recipeKeys } from "@/features/recipes/recipe-keys";
 
 export const useRecipes = () => {
   const { instance, accounts } = useMsal();
 
   return useQuery({
-    queryKey: ["recipes"],
+    queryKey: recipeKeys.all,
     queryFn: async () => {
-      const account = instance.getActiveAccount() ?? accounts[0];
+      const accessToken = await getAccessToken(instance, accounts);
 
-      if (!account) {
-        throw new Error("Du behöver logga in för att se recepten.");
-      }
-
-      const tokenResponse = await instance
-        .acquireTokenSilent({
-          account,
-          scopes: [apiScope],
-        })
-        .catch((tokenError: unknown) => {
-          throw new Error("Din inloggning har gått ut. Logga in igen och försök på nytt.", {
-            cause: tokenError,
-          });
-        });
-
-      return getRecipes(tokenResponse.accessToken);
+      return getRecipes(accessToken);
     },
   });
 };

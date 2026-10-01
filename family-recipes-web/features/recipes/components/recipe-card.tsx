@@ -8,12 +8,15 @@ interface RecipeCardProps {
 const createdAtFormatter = new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short" });
 
 export const RecipeCard = ({ recipe }: RecipeCardProps) => (
-  <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-card shadow-sm ring-1 ring-border/50">
+  <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-card shadow-sm ring-1 ring-border/50 transition-shadow group-hover:shadow-md">
     <div className="flex aspect-[16/9] items-center justify-center bg-secondary/70">
       <UtensilsCrossed aria-hidden="true" className="size-8 text-primary/40" />
     </div>
     <div className="flex flex-1 flex-col gap-2 p-5">
-      <h3 className="font-heading text-2xl leading-tight font-medium tracking-tight text-foreground">
+      <h3
+        id={`recipe-title-${recipe.id}`}
+        className="font-heading text-2xl leading-tight font-medium tracking-tight text-foreground"
+      >
         {recipe.title}
       </h3>
       {recipe.description ? (
