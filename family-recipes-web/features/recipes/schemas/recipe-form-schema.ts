@@ -16,7 +16,7 @@ const ingredientSchema = z.object({
   name: z.string().trim().min(1, "Ange en ingrediens.").max(200, "Ingrediensen får vara högst 200 tecken."),
 });
 
-export const createRecipeSchema = z.object({
+export const recipeFormSchema = z.object({
   title: z.string().trim().min(1, "Ange en titel.").max(200, "Titeln får vara högst 200 tecken."),
   description: z.string().trim().max(2000, "Beskrivningen får vara högst 2 000 tecken."),
   instructions: z
@@ -27,4 +27,4 @@ export const createRecipeSchema = z.object({
   ingredients: z.array(ingredientSchema).min(1, "Lägg till minst en ingrediens."),
 });
 
-export type CreateRecipeFormValues = z.infer<typeof createRecipeSchema>;
+export type RecipeFormValues = z.infer<typeof recipeFormSchema>;

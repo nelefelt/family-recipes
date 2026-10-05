@@ -1,5 +1,6 @@
 specification/
 family-recipes-web/specification/
+plan/
 .env
 .cursor/rules/dotnet-development.mdc
 

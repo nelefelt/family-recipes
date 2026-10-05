@@ -17,5 +17,5 @@ public class CreateRecipeRequest
 
     [Required]
     [MinLength(1)]
-    public required IReadOnlyList<CreateIngredientRequest> Ingredients { get; set; }
+    public required IReadOnlyList<IngredientRequest> Ingredients { get; set; }
 }

@@ -152,7 +152,65 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    recipeId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRecipeRequest"];
+                    "application/*+json": components["schemas"]["UpdateRecipeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecipeResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         post?: never;
         delete: {
             parameters: {
@@ -257,17 +315,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        CreateIngredientRequest: {
-            name: string;
-            /** Format: double */
-            amount?: null | number;
-            unit?: null | string;
-        };
         CreateRecipeRequest: {
             title: string;
             description?: null | string;
             instructions: string;
-            ingredients: components["schemas"]["CreateIngredientRequest"][];
+            ingredients: components["schemas"]["IngredientRequest"][];
+        };
+        IngredientRequest: {
+            name: string;
+            /** Format: double */
+            amount?: null | number;
+            unit?: null | string;
         };
         IngredientResponse: {
             /** Format: int32 */
@@ -299,6 +357,12 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             ingredients: components["schemas"]["IngredientResponse"][];
+        };
+        UpdateRecipeRequest: {
+            title: string;
+            description?: null | string;
+            instructions: string;
+            ingredients: components["schemas"]["IngredientRequest"][];
         };
         UserResponse: {
             /** Format: int32 */

@@ -1,6 +1,7 @@
 "use client";
 
 import { CircleAlert, Ellipsis, Loader2, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -29,7 +30,7 @@ interface RecipeActionsProps {
   recipeTitle: string;
 }
 
-const menuItemClassName = "h-11 gap-2.5 rounded-xl px-3 text-[15px] font-medium";
+const menuItemClassName = "h-11 cursor-pointer gap-2.5 rounded-xl px-3 text-[15px] font-medium";
 const dialogButtonClassName = "h-12 w-full rounded-2xl text-[15px] font-semibold";
 
 export const RecipeActions = ({ recipeId, recipeTitle }: RecipeActionsProps) => {
@@ -67,14 +68,16 @@ export const RecipeActions = ({ recipeId, recipeTitle }: RecipeActionsProps) => 
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="Hantera recept"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card text-foreground shadow-sm ring-1 ring-border/70 outline-none transition-all hover:bg-secondary/60 focus-visible:ring-3 focus-visible:ring-ring/40 active:scale-95 data-[state=open]:bg-secondary data-[state=open]:ring-primary/25"
+          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-card text-foreground shadow-sm ring-1 ring-border/70 outline-none transition-all hover:bg-secondary/60 focus-visible:ring-3 focus-visible:ring-ring/40 active:scale-95 data-[state=open]:bg-secondary data-[state=open]:ring-primary/25"
         >
           <Ellipsis aria-hidden="true" className="size-5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-2xl p-1.5 shadow-lg">
-          <DropdownMenuItem className={menuItemClassName}>
-            <Pencil aria-hidden="true" className="size-[18px]" />
-            Redigera recept
+          <DropdownMenuItem asChild className={menuItemClassName}>
+            <Link href={`/recipes/${recipeId}/edit`}>
+              <Pencil aria-hidden="true" className="size-[18px]" />
+              Redigera recept
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="my-1" />
           <DropdownMenuItem

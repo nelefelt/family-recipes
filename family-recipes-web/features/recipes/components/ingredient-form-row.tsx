@@ -4,14 +4,14 @@ import type { FieldError, UseFormRegister } from "react-hook-form";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { CreateRecipeFormValues } from "@/features/recipes/schemas/create-recipe-schema";
+import type { RecipeFormValues } from "@/features/recipes/schemas/recipe-form-schema";
 
 const fieldClassName =
   "h-12 rounded-xl border-0 bg-background/70 px-3 shadow-none placeholder:text-muted-foreground/50 focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-primary/20 aria-invalid:ring-2 aria-invalid:ring-destructive/30";
 
 type IngredientFormRowProps = {
   index: number;
-  register: UseFormRegister<CreateRecipeFormValues>;
+  register: UseFormRegister<RecipeFormValues>;
   amountError?: FieldError;
   unitError?: FieldError;
   nameError?: FieldError;

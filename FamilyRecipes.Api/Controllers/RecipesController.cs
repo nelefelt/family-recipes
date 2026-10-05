@@ -44,6 +44,18 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
         return CreatedAtAction(nameof(GetRecipeById), new { recipeId = recipe.Id }, recipe);
     }
 
+    [HttpPut("{recipeId:int}")]
+    [Consumes("application/json")]
+    [ProducesResponseType<RecipeResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RecipeResponse>> UpdateRecipe(int recipeId, UpdateRecipeRequest request, CancellationToken cancellationToken)
+    {
+        var recipe = await recipeService.UpdateRecipeAsync(recipeId, request, cancellationToken);
+
+        return Ok(recipe);
+    }
+
     [HttpDelete("{recipeId:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

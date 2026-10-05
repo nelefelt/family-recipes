@@ -65,19 +65,57 @@ public class RecipeService(
             CreatedByUser = user,
             CreatedAt = now,
             UpdatedAt = now,
-            Ingredients = request.Ingredients
-                .Select(ingredient => new Ingredient
-                {
-                    Name = ingredient.Name,
-                    Amount = ingredient.Amount,
-                    Unit = ingredient.Unit
-                })
-                .ToList()
+            Ingredients = ToIngredients(request.Ingredients)
         };
 
         await recipeRepository.AddAsync(recipe, cancellationToken);
         await recipeRepository.SaveChangesAsync(cancellationToken);
 
         return recipe.ToResponse();
+    }
+
+    public async Task<RecipeResponse> UpdateRecipeAsync(int id, UpdateRecipeRequest request, CancellationToken cancellationToken)
+    {
+        var recipe = await recipeRepository.GetByIdForUpdateAsync(id, cancellationToken);
+
+        if (recipe is null)
+        {
+            throw new RecipeNotFoundException(id);
+        }
+
+        var currentUser = await userService.GetOrCreateCurrentAsync(cancellationToken);
+
+        if (recipe.CreatedByUserId != currentUser.Id)
+        {
+            throw new RecipeForbiddenException(id);
+        }
+
+        recipe.Title = request.Title;
+        recipe.Description = request.Description;
+        recipe.Instructions = request.Instructions;
+        recipe.UpdatedAt = DateTime.UtcNow;
+        recipe.CreatedByUser = currentUser;
+        recipe.Ingredients.Clear();
+
+        foreach (var ingredient in ToIngredients(request.Ingredients))
+        {
+            recipe.Ingredients.Add(ingredient);
+        }
+
+        await recipeRepository.SaveChangesAsync(cancellationToken);
+
+        return recipe.ToResponse();
+    }
+
+    private static List<Ingredient> ToIngredients(IReadOnlyList<IngredientRequest> ingredients)
+    {
+        return ingredients
+            .Select(ingredient => new Ingredient
+            {
+                Name = ingredient.Name,
+                Amount = ingredient.Amount,
+                Unit = ingredient.Unit
+            })
+            .ToList();
     }
 }

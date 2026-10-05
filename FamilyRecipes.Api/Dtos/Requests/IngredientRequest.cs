@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FamilyRecipes.Api.DTOs.Requests;
 
-public class CreateIngredientRequest
+public class IngredientRequest
 {
     [Required]
     [MaxLength(200)]
