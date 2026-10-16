@@ -47,6 +47,7 @@ try
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IRecipeService, RecipeService>();
     builder.Services.AddScoped<IUserService, UserService>();
+    builder.Services.AddSingleton(TimeProvider.System);
 
     builder.Services.AddHttpContextAccessor();
 

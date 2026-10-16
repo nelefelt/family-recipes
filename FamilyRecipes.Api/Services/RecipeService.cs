@@ -9,7 +9,8 @@ namespace FamilyRecipes.Api.Services;
 
 public class RecipeService(
     IRecipeRepository recipeRepository,
-    IUserService userService) : IRecipeService
+    IUserService userService,
+    TimeProvider timeProvider) : IRecipeService
 {
     public async Task<IReadOnlyList<RecipeResponse>> GetRecipesAsync(CancellationToken cancellationToken)
     {
@@ -55,7 +56,7 @@ public class RecipeService(
     public async Task<RecipeResponse> CreateRecipeAsync(CreateRecipeRequest request, CancellationToken cancellationToken)
     {
         var user = await userService.GetOrCreateCurrentAsync(cancellationToken);
-        var now = DateTime.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var recipe = new Recipe
         {
             Title = request.Title,
@@ -93,7 +94,7 @@ public class RecipeService(
         recipe.Title = request.Title;
         recipe.Description = request.Description;
         recipe.Instructions = request.Instructions;
-        recipe.UpdatedAt = DateTime.UtcNow;
+        recipe.UpdatedAt = timeProvider.GetUtcNow().UtcDateTime;
         recipe.CreatedByUser = currentUser;
         recipe.Ingredients.Clear();
 
