@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "generate:api": "openapi-typescript http://localhost:5133/openapi/v1.json -o lib/api/generated/schema.ts"
+    "generate:api": "openapi-typescript ../FamilyRecipes.Api/openapi/FamilyRecipes.Api.json -o lib/api/generated/schema.ts",
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@azure/msal-browser": "^5.22.0",
