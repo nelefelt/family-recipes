@@ -1,0 +1,37 @@
+name: API contract
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build API and generate OpenAPI document
+        run: dotnet build FamilyRecipes.Api
+
+      - name: Install frontend dependencies
+        working-directory: family-recipes-web
+        run: npm ci
+
+      - name: Generate TypeScript types
+        working-directory: family-recipes-web
+        run: npm run generate:api
+
+      - name: Fail if committed types are stale
+        working-directory: family-recipes-web
+        run: git diff --exit-code -- lib/api/generated/schema.ts
+
+      - name: Type check frontend
+        working-directory: family-recipes-web
+        run: npm run typecheck
