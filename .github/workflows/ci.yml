@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test
+
+  api-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build API and generate OpenAPI document
+        run: dotnet build FamilyRecipes.Api
+
+      - name: Install frontend dependencies
+        working-directory: family-recipes-web
+        run: npm ci
+
+      - name: Generate TypeScript types
+        working-directory: family-recipes-web
+        run: npm run generate:api
+
+      - name: Fail if committed types are stale
+        working-directory: family-recipes-web
+        run: git diff --exit-code -- lib/api/generated/schema.ts
+
+      - name: Type check frontend
+        working-directory: family-recipes-web
+        run: npm run typecheck
+
+  package:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    needs: [test, api-contract]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Publish API
+        run: dotnet publish FamilyRecipes.Api -c Release -o artifacts/api
+
+      - name: Build EF migrations bundle
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.11
+          dotnet ef migrations bundle --self-contained -r linux-x64 --project FamilyRecipes.Api --output artifacts/efbundle
+
+      - name: Build web
+        working-directory: family-recipes-web
+        env:
+          NEXT_PUBLIC_MSAL_CLIENT_ID: ${{ vars.NEXT_PUBLIC_MSAL_CLIENT_ID }}
+          NEXT_PUBLIC_MSAL_AUTHORITY: ${{ vars.NEXT_PUBLIC_MSAL_AUTHORITY }}
+          NEXT_PUBLIC_MSAL_REDIRECT_URI: ${{ vars.NEXT_PUBLIC_MSAL_REDIRECT_URI }}
+          NEXT_PUBLIC_API_SCOPE: ${{ vars.NEXT_PUBLIC_API_SCOPE }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+        run: |
+          npm ci
+          npm run build
+          if [ -f .next/standalone/server.js ]; then
+            APP_DIR=.next/standalone
+          else
+            APP_DIR=.next/standalone/family-recipes-web
+          fi
+          mkdir -p "$APP_DIR/.next"
+          cp -r public "$APP_DIR/public"
+          cp -r .next/static "$APP_DIR/.next/static"
+          mkdir -p ../artifacts/web
+          cp -a "$APP_DIR"/. ../artifacts/web/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-package
+          path: artifacts/api
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-package
+          path: artifacts/web
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: efbundle
+          path: artifacts/efbundle
+          retention-days: 30
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    needs: package
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-package
+          path: artifacts/api
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-package
+          path: artifacts/web
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: efbundle
+          path: artifacts
+
+      - name: Allow GitHub runner through SQL firewall
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "RUNNER_IP=$RUNNER_IP" >> "$GITHUB_ENV"
+          az sql server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.AZURE_SQL_SERVER }}" \
+            --name "gha-${{ github.run_id }}" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP"
+
+      - name: Apply EF migrations
+        env:
+          SQLSERVER_CONNECTIONSTRING: "Server=tcp:${{ vars.AZURE_SQL_SERVER }}.database.windows.net,1433;Database=${{ vars.AZURE_SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True"
+        run: |
+          chmod +x artifacts/efbundle
+          ./artifacts/efbundle --connection "$SQLSERVER_CONNECTIONSTRING"
+
+      - name: Remove GitHub runner SQL firewall rule
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.AZURE_SQL_SERVER }}" \
+            --name "gha-${{ github.run_id }}" \
+            --yes
+
+      - name: Deploy API
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_API_APP_NAME }}
+          package: artifacts/api
+
+      - name: Deploy web
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEB_APP_NAME }}
+          package: artifacts/web
+
+      - name: Smoke test
+        run: |
+          curl --fail --retry 8 --retry-all-errors --retry-delay 5 \
+            "${{ vars.AZURE_API_BASE_URL }}/health"
+          curl --fail --retry 8 --retry-all-errors --retry-delay 5 \
+            "${{ vars.AZURE_WEB_BASE_URL }}/"
