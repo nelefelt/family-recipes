@@ -1,0 +1,63 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: ID of a previous green CI run whose api-package and web-package should be restored
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      id-token: write
+      contents: read
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-package
+          path: artifacts/api
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.run_id }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-package
+          path: artifacts/web
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.run_id }}
+
+      - name: Deploy API
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_API_APP_NAME }}
+          package: artifacts/api
+
+      - name: Deploy web
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEB_APP_NAME }}
+          package: artifacts/web
+
+      - name: Smoke test
+        run: |
+          curl --fail --retry 8 --retry-all-errors --retry-delay 5 \
+            "${{ vars.AZURE_API_BASE_URL }}/health"
+          curl --fail --retry 8 --retry-all-errors --retry-delay 5 \
+            "${{ vars.AZURE_WEB_BASE_URL }}/"
