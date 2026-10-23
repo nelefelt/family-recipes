@@ -63,9 +63,12 @@ jobs:
         run: dotnet publish FamilyRecipes.Api -c Release -o artifacts/api
 
       - name: Build EF migrations bundle
+        working-directory: FamilyRecipes.Api
+        env:
+          ConnectionStrings__DefaultConnection: Server=127.0.0.1;Database=efbundle;User Id=ci;Password=ci;TrustServerCertificate=True
         run: |
           dotnet tool install --global dotnet-ef --version 10.0.11
-          dotnet ef migrations bundle --self-contained -r linux-x64 --project FamilyRecipes.Api --output artifacts/efbundle
+          dotnet ef migrations bundle --self-contained -r linux-x64 --output ../artifacts/efbundle
 
       - name: Build web
         working-directory: family-recipes-web
