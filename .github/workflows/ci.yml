@@ -167,8 +167,7 @@ jobs:
           az sql server firewall-rule delete \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --server "${{ vars.AZURE_SQL_SERVER }}" \
-            --name "gha-${{ github.run_id }}" \
-            --yes
+            --name "gha-${{ github.run_id }}"
 
       - name: Deploy API
         uses: azure/webapps-deploy@v3
