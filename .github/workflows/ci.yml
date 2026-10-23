@@ -156,10 +156,10 @@ jobs:
 
       - name: Apply EF migrations
         env:
-          SQLSERVER_CONNECTIONSTRING: "Server=tcp:${{ vars.AZURE_SQL_SERVER }}.database.windows.net,1433;Database=${{ vars.AZURE_SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True"
+          ConnectionStrings__DefaultConnection: "Server=tcp:${{ vars.AZURE_SQL_SERVER }}.database.windows.net,1433;Database=${{ vars.AZURE_SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True"
         run: |
           chmod +x artifacts/efbundle
-          ./artifacts/efbundle --connection "$SQLSERVER_CONNECTIONSTRING"
+          ./artifacts/efbundle --connection "$ConnectionStrings__DefaultConnection"
 
       - name: Remove GitHub runner SQL firewall rule
         if: always()
