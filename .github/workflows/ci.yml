@@ -89,6 +89,7 @@ jobs:
           mkdir -p "$APP_DIR/.next"
           cp -r public "$APP_DIR/public"
           cp -r .next/static "$APP_DIR/.next/static"
+          cp .next/BUILD_ID "$APP_DIR/.next/BUILD_ID"
           mkdir -p ../artifacts/web
           cp -a "$APP_DIR"/. ../artifacts/web/
 
@@ -102,6 +103,7 @@ jobs:
         with:
           name: web-package
           path: artifacts/web
+          include-hidden-files: true
           retention-days: 30
 
       - uses: actions/upload-artifact@v4
