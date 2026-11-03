@@ -1,0 +1,9 @@
+---
+description: Production deploy, GitHub Actions, Azure App Service, Azure SQL identity, Entra CIAM vs hosting tenant, OIDC, and GitHub environment production.
+globs: .github/workflows/**,docs/deploy.md,FamilyRecipes.Api/appsettings.json
+alwaysApply: false
+---
+
+Before changing CI, deploy, rollback, App Service, Azure SQL access, CORS origins, Entra redirect URIs, or GitHub environments/variables, read `docs/deploy.md` and the workflow YAML. That document is the contract: two Entra tenants, OIDC (no Azure secrets), IAM ≠ SQL data plane, `efbundle` only on deploy, unique `*.swedencentral-01.azurewebsites.net` hostnames, `NEXT_PUBLIC_*` baked at package time.
+
+Do not invent resource names, identities, or GitHub variables. Do not add client secrets, subscription-wide RBAC, startup migrations, or `efbundle` to rollback.
