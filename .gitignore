@@ -1,6 +1,7 @@
 specification/
 family-recipes-web/specification/
 plan/
+learning/
 .env
 .cursor/rules/dotnet-development.mdc
 
