@@ -45,9 +45,25 @@ jobs:
         working-directory: family-recipes-web
         run: npm run typecheck
 
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install frontend dependencies
+        working-directory: family-recipes-web
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: family-recipes-web
+        run: npm run test:ci
+
   package:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    needs: [test, api-contract]
+    needs: [test, api-contract, frontend-test]
     runs-on: ubuntu-latest
     environment: production
     steps:
