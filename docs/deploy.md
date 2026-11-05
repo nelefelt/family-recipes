@@ -8,7 +8,7 @@ Audience: engineers and coding agents changing CI, App Service, SQL access, Entr
 
 ```
 GitHub (nelefelt/family-recipes)
-  PR  ──► jobs: test, api-contract          (required checks)
+  PR  ──► jobs: test, api-contract, frontend-test   (required checks)
   main ──► package ──► deploy               (only if DEPLOY_ENABLED=true)
                  │         │
                  │         ├─ OIDC ──► user-assigned identity ──► Azure control plane
@@ -60,8 +60,8 @@ Workflows: `.github/workflows/ci.yml`, `.github/workflows/rollback.yml`.
 
 | Trigger | Jobs | Notes |
 |---|---|---|
-| Pull request | `test`, `api-contract` | Required. `package` / `deploy` do **not** run on PRs. |
-| Push to `main` and `vars.DEPLOY_ENABLED == 'true'` | `test` → `api-contract` → `package` → `deploy` | `package` and `deploy` use GitHub environment `production` (deployment branch: `main` only). |
+| Pull request | `test`, `api-contract`, `frontend-test` | Required. `package` / `deploy` do **not** run on PRs. |
+| Push to `main` and `vars.DEPLOY_ENABLED == 'true'` | `test`, `api-contract`, `frontend-test` → `package` → `deploy` | The three check jobs run in parallel and `package` needs all of them. `package` and `deploy` use GitHub environment `production` (deployment branch: `main` only). |
 | `workflow_dispatch` on `main` | `rollback` | Restores `api-package` and `web-package` from a previous green `run_id`. Does **not** run `efbundle`. Schema is not reversed. |
 
 `DEPLOY_ENABLED` is a **repository** variable (job-level `if` runs before environment binding). Everything else listed below is on environment `production`.
@@ -99,7 +99,7 @@ Read this file and the workflow YAML before changing deploy, identity, App Servi
 
 Do:
 
-- Keep required PR checks as `test` and `api-contract` only.
+- Keep required PR checks as `test`, `api-contract` and `frontend-test` only.
 - Keep OIDC; do not add Azure secrets to GitHub.
 - Apply schema with `efbundle` in `deploy`, never in application startup.
 - Scope deploy RBAC to the two web apps plus the SQL firewall custom role. Do not grant subscription or resource-group Contributor to the deploy identity.
