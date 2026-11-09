@@ -9,6 +9,7 @@ Audience: engineers and coding agents changing CI, App Service, SQL access, Entr
 ```
 GitHub (nelefelt/family-recipes)
   PR  ──► jobs: test, api-contract, frontend-test   (required checks)
+          job:  e2e                                 (runs, not required yet)
   main ──► package ──► deploy               (only if DEPLOY_ENABLED=true)
                  │         │
                  │         ├─ OIDC ──► user-assigned identity ──► Azure control plane
@@ -62,6 +63,7 @@ Workflows: `.github/workflows/ci.yml`, `.github/workflows/rollback.yml`.
 |---|---|---|
 | Pull request | `test`, `api-contract`, `frontend-test` | Required. `package` / `deploy` do **not** run on PRs. |
 | Push to `main` and `vars.DEPLOY_ENABLED == 'true'` | `test`, `api-contract`, `frontend-test` → `package` → `deploy` | The three check jobs run in parallel and `package` needs all of them. `package` and `deploy` use GitHub environment `production` (deployment branch: `main` only). |
+| Pull request and push to `main` | `e2e` | Playwright against an E2E web build and a test-only API host (`tests/FamilyRecipes.Api.E2EHost`) with SQL Server in Docker. Not in `package.needs` yet, so it does not block deploy. |
 | `workflow_dispatch` on `main` | `rollback` | Restores `api-package` and `web-package` from a previous green `run_id`. Does **not** run `efbundle`. Schema is not reversed. |
 
 `DEPLOY_ENABLED` is a **repository** variable (job-level `if` runs before environment binding). Everything else listed below is on environment `production`.
@@ -71,6 +73,8 @@ Workflows: `.github/workflows/ci.yml`, `.github/workflows/rollback.yml`.
 Deploy order: open runner IP on SQL firewall → `efbundle` → delete firewall rule → zip-deploy API → zip-deploy web → smoke `GET {AZURE_API_BASE_URL}/health` and `GET {AZURE_WEB_BASE_URL}/`. A red smoke test means the job failed; the new zip may already be on the apps.
 
 `package` dummy connection string for `dotnet ef migrations bundle` is CI-only (efbundle still needs a connection string at build). Production connection is injected at migrate time.
+
+E2E uses a fake sign-in, enabled only by `E2E_BUILD=1` in `family-recipes-web/playwright.config.ts`. That build goes to `.next-e2e` and is never uploaded. `package` fails if the marker `e2e-fake-auth` is found in `artifacts/web`.
 
 Next.js `NEXT_PUBLIC_*` is compiled into the web artifact during `package`. Changing App Service settings does not update those values; re-run `package`.
 
@@ -112,6 +116,7 @@ Do not:
 - Treat Website Contributor (or any Azure IAM role) as database access.
 - Put SQL passwords in config; the server is Entra-only.
 - Run `efbundle` from `rollback.yml`.
+- Set `E2E_BUILD` anywhere except `playwright.config.ts`, or remove the `e2e-fake-auth` check from `package`.
 - Smoke-test against `*.azurewebsites.net` instead of the unique regional hostname.
 - Upload `web-package` without hidden files.
 - Widen the federated credential subject away from `environment:production` on `main`.
