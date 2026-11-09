@@ -8,8 +8,7 @@ Audience: engineers and coding agents changing CI, App Service, SQL access, Entr
 
 ```
 GitHub (nelefelt/family-recipes)
-  PR  ──► jobs: test, api-contract, frontend-test   (required checks)
-          job:  e2e                                 (runs, not required yet)
+  PR  ──► jobs: test, api-contract, frontend-test, e2e   (required checks)
   main ──► package ──► deploy               (only if DEPLOY_ENABLED=true)
                  │         │
                  │         ├─ OIDC ──► user-assigned identity ──► Azure control plane
@@ -61,9 +60,10 @@ Workflows: `.github/workflows/ci.yml`, `.github/workflows/rollback.yml`.
 
 | Trigger | Jobs | Notes |
 |---|---|---|
-| Pull request | `test`, `api-contract`, `frontend-test` | Required. `package` / `deploy` do **not** run on PRs. |
-| Push to `main` and `vars.DEPLOY_ENABLED == 'true'` | `test`, `api-contract`, `frontend-test` → `package` → `deploy` | The three check jobs run in parallel and `package` needs all of them. `package` and `deploy` use GitHub environment `production` (deployment branch: `main` only). |
-| Pull request and push to `main` | `e2e` | Playwright against an E2E web build and a test-only API host (`tests/FamilyRecipes.Api.E2EHost`) with SQL Server in Docker. Not in `package.needs` yet, so it does not block deploy. |
+| Pull request | `test`, `api-contract`, `frontend-test`, `e2e` | Required. `package` / `deploy` do **not** run on PRs. |
+| Push to `main` and `vars.DEPLOY_ENABLED == 'true'` | `test`, `api-contract`, `frontend-test`, `e2e` → `package` → `deploy` | The four check jobs run in parallel and `package` needs all of them. `package` and `deploy` use GitHub environment `production` (deployment branch: `main` only). |
+
+`e2e` runs Playwright against an E2E web build and a test-only API host (`tests/FamilyRecipes.Api.E2EHost`) with SQL Server in Docker. It has no job-level `if` or path filter, because a skipped job in `needs` would also skip `package` and `deploy`.
 | `workflow_dispatch` on `main` | `rollback` | Restores `api-package` and `web-package` from a previous green `run_id`. Does **not** run `efbundle`. Schema is not reversed. |
 
 `DEPLOY_ENABLED` is a **repository** variable (job-level `if` runs before environment binding). Everything else listed below is on environment `production`.
@@ -103,7 +103,7 @@ Read this file and the workflow YAML before changing deploy, identity, App Servi
 
 Do:
 
-- Keep required PR checks as `test`, `api-contract` and `frontend-test` only.
+- Keep required PR checks as `test`, `api-contract`, `frontend-test` and `e2e` only.
 - Keep OIDC; do not add Azure secrets to GitHub.
 - Apply schema with `efbundle` in `deploy`, never in application startup.
 - Scope deploy RBAC to the two web apps plus the SQL firewall custom role. Do not grant subscription or resource-group Contributor to the deploy identity.

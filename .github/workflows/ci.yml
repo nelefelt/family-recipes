@@ -61,8 +61,7 @@ jobs:
         working-directory: family-recipes-web
         run: npm run test:ci
 
-  # Not in package.needs yet: it is added once it has run reliably, so a flaky test cannot block deploy.
-  # No job-level if or path filter, so it also runs on push to main.
+  # package needs this job. No job-level if or path filter: a skipped job in needs would also skip deploy.
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -97,7 +96,7 @@ jobs:
 
   package:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    needs: [test, api-contract, frontend-test]
+    needs: [test, api-contract, frontend-test, e2e]
     runs-on: ubuntu-latest
     environment: production
     steps:
