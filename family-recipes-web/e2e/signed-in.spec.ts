@@ -4,7 +4,6 @@ import { expect, test } from "@playwright/test";
 test("shows the signed-in user on the start page", async ({ page }) => {
   await page.goto("/");
 
-  // DELIBERATE FAILURE for the CI red test. Revert before merging.
-  await expect(page.getByRole("heading", { level: 1, name: /, Bertil$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /, Anna$/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Senast tillagda" })).toBeVisible();
 });
