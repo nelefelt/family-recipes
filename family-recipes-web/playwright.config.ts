@@ -1,9 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import { e2eApiUrl as apiUrl, testUsers } from "./e2e/support/test-users";
 
 const webPort = 3100;
-const apiPort = 5199;
 const webUrl = `http://localhost:${webPort}`;
-const apiUrl = `http://localhost:${apiPort}`;
 const isCi = Boolean(process.env.CI);
 
 export default defineConfig({
@@ -16,12 +15,8 @@ export default defineConfig({
   use: {
     baseURL: webUrl,
     trace: "on-first-retry",
-    // TestAuthHandler in the E2E API turns these into the signed-in user.
-    extraHTTPHeaders: {
-      "X-Test-User-Id": "e2e-user-anna",
-      "X-Test-User-Name": "Anna Testsson",
-      "X-Test-Scope": "access_as_user",
-    },
+    // Every test is signed in as Anna unless it opens its own context, see e2e/support/test-users.ts.
+    extraHTTPHeaders: testUsers.anna,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // Playwright runs these commands, waits until each URL responds, and stops them after the run.
