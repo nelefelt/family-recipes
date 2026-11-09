@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./test/setup.ts"],
+    // Playwright owns e2e/, and its spec files would otherwise match the Vitest pattern.
+    exclude: [...configDefaults.exclude, "e2e/**"],
     // auth-config.ts throws on import if these are missing. They are fake values, no test reaches Entra.
     env: {
       NEXT_PUBLIC_MSAL_CLIENT_ID: "test-client-id",

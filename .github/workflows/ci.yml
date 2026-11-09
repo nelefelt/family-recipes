@@ -61,9 +61,42 @@ jobs:
         working-directory: family-recipes-web
         run: npm run test:ci
 
+  # package needs this job. No job-level if or path filter: a skipped job in needs would also skip deploy.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install frontend dependencies
+        working-directory: family-recipes-web
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: family-recipes-web
+        run: npx playwright install --with-deps chromium
+
+      # Playwright starts the E2E API host (SQL Server in Docker) and an E2E build of the web app.
+      - name: Run E2E tests
+        working-directory: family-recipes-web
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: family-recipes-web/playwright-report
+          retention-days: 14
+
   package:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    needs: [test, api-contract, frontend-test]
+    needs: [test, api-contract, frontend-test, e2e]
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -108,6 +141,14 @@ jobs:
           cp .next/BUILD_ID "$APP_DIR/.next/BUILD_ID"
           mkdir -p ../artifacts/web
           cp -a "$APP_DIR"/. ../artifacts/web/
+
+      # The fake sign-in in e2e/support/fake-msal-react.tsx carries this marker. It must never ship.
+      - name: Fail if the E2E fake sign-in is in the web package
+        run: |
+          if grep -rq "e2e-fake-auth" artifacts/web; then
+            echo "::error::The E2E fake sign-in was found in the web package."
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
