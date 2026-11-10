@@ -40,6 +40,26 @@ public sealed class DeleteRecipeTests(FamilyRecipesApiFactory factory) : Integra
         Assert.Contains(ingredients, ingredient => ingredient.Name == "Sugar");
     }
 
+    // Smoke test of the invariant. Passing does not prove the requests overlapped.
+    [Fact]
+    public async Task DeleteRecipe_CalledInParallel_DeletesOnceAndReturnsNotFoundForTheRest()
+    {
+        var user = await SeedUserAsync("user-a", "User A");
+        var recipe = await SeedRecipeAsync(user.Id, "Flour", "Sugar");
+        var client = Factory.CreateAuthenticatedClient("user-a", "User A");
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var responses = await Task.WhenAll(
+            Enumerable.Range(0, 5).Select(_ => client.DeleteAsync($"/api/recipes/{recipe.Id}", cancellationToken)));
+
+        Assert.Single(responses, response => response.StatusCode == HttpStatusCode.NoContent);
+        Assert.All(
+            responses.Where(response => response.StatusCode != HttpStatusCode.NoContent),
+            response => Assert.Equal(HttpStatusCode.NotFound, response.StatusCode));
+        Assert.Null(await FindRecipeAsync(recipe.Id));
+        Assert.Empty(await GetIngredientsAsync(recipe.Id));
+    }
+
     [Fact]
     public async Task DeleteRecipe_WhenRecipeDoesNotExist_ReturnsNotFound()
     {

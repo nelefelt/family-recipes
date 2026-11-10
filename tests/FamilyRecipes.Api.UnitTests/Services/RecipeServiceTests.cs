@@ -30,14 +30,28 @@ public sealed class RecipeServiceTests
         var owner = CreateUser(id: 1, externalId: "user-a");
         var otherUser = CreateUser(id: 2, externalId: "user-b");
         var recipe = CreateRecipe(id: 10, owner);
-        _recipeRepository.GetByIdForUpdateAsync(recipe.Id, cancellationToken).Returns(recipe);
+        _recipeRepository.GetByIdAsync(recipe.Id, cancellationToken).Returns(recipe);
         _userService.GetOrCreateCurrentAsync(cancellationToken).Returns(otherUser);
 
         await Assert.ThrowsAsync<RecipeForbiddenException>(
             () => _sut.DeleteRecipeAsync(recipe.Id, cancellationToken));
 
-        _recipeRepository.DidNotReceive().Delete(Arg.Any<Recipe>());
-        await _recipeRepository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _recipeRepository.DidNotReceive()
+            .DeleteOwnedAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DeleteRecipeAsync_WhenRecipeIsDeletedBeforeOurDelete_ThrowsNotFound()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var owner = CreateUser(id: 1, externalId: "user-a");
+        var recipe = CreateRecipe(id: 10, owner);
+        _recipeRepository.GetByIdAsync(recipe.Id, cancellationToken).Returns(recipe);
+        _userService.GetOrCreateCurrentAsync(cancellationToken).Returns(owner);
+        _recipeRepository.DeleteOwnedAsync(recipe.Id, owner.Id, cancellationToken).Returns(0);
+
+        await Assert.ThrowsAsync<RecipeNotFoundException>(
+            () => _sut.DeleteRecipeAsync(recipe.Id, cancellationToken));
     }
 
     [Fact]

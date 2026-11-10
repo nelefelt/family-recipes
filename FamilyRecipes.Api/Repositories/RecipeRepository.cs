@@ -38,9 +38,13 @@ public class RecipeRepository(AppDbContext dbContext) : IRecipeRepository
         await dbContext.Recipes.AddAsync(recipe, cancellationToken);
     }
 
-    public void Delete(Recipe recipe)
+    // One DELETE statement with no prior read, so nothing can change in between. The database's
+    // ON DELETE CASCADE removes the ingredients.
+    public Task<int> DeleteOwnedAsync(int id, int ownerId, CancellationToken cancellationToken)
     {
-        dbContext.Recipes.Remove(recipe);
+        return dbContext.Recipes
+            .Where(recipe => recipe.Id == id && recipe.CreatedByUserId == ownerId)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     public void PrepareConcurrencyCheck(Recipe recipe, byte[] expectedVersion)

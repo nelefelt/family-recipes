@@ -36,7 +36,7 @@ public class RecipeService(
 
     public async Task DeleteRecipeAsync(int id, CancellationToken cancellationToken)
     {
-        var recipe = await recipeRepository.GetByIdForUpdateAsync(id, cancellationToken);
+        var recipe = await recipeRepository.GetByIdAsync(id, cancellationToken);
 
         if (recipe is null)
         {
@@ -50,8 +50,13 @@ public class RecipeService(
             throw new RecipeForbiddenException(id);
         }
 
-        recipeRepository.Delete(recipe);
-        await recipeRepository.SaveChangesAsync(cancellationToken);
+        var deletedCount = await recipeRepository.DeleteOwnedAsync(id, currentUser.Id, cancellationToken);
+
+        // Another request deleted the recipe after our read.
+        if (deletedCount == 0)
+        {
+            throw new RecipeNotFoundException(id);
+        }
     }
 
     public async Task<RecipeResponse> CreateRecipeAsync(CreateRecipeRequest request, CancellationToken cancellationToken)
