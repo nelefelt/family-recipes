@@ -9,5 +9,6 @@ public interface IRecipeRepository
     Task<Recipe?> GetByIdForUpdateAsync(int id, CancellationToken cancellationToken);
     Task AddAsync(Recipe recipe, CancellationToken cancellationToken);
     void Delete(Recipe recipe);
+    void PrepareConcurrencyCheck(Recipe recipe, byte[] expectedVersion);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

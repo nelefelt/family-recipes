@@ -18,4 +18,7 @@ public class UpdateRecipeRequest
     [Required]
     [MinLength(1)]
     public required IReadOnlyList<IngredientRequest> Ingredients { get; set; }
+
+    [Required]
+    public required byte[] Version { get; set; }
 }

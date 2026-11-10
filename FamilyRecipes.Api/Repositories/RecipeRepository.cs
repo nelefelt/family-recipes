@@ -43,6 +43,18 @@ public class RecipeRepository(AppDbContext dbContext) : IRecipeRepository
         dbContext.Recipes.Remove(recipe);
     }
 
+    public void PrepareConcurrencyCheck(Recipe recipe, byte[] expectedVersion)
+    {
+        var entry = dbContext.Entry(recipe);
+
+        // EF Core puts the original RowVersion in the UPDATE's WHERE clause, so use the client's version.
+        entry.Property(r => r.RowVersion).OriginalValue = expectedVersion;
+
+        // Ingredients live in their own table. Without this, an ingredient-only change would not
+        // update the recipe row, so the version would be neither checked nor changed.
+        entry.Property(r => r.UpdatedAt).IsModified = true;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         return dbContext.SaveChangesAsync(cancellationToken);

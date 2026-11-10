@@ -20,6 +20,10 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
                 StatusCodes.Status403Forbidden,
                 "Recipe forbidden",
                 "You can only change your own recipes."),
+            RecipeConflictException => (
+                StatusCodes.Status409Conflict,
+                "Recipe conflict",
+                "The recipe has been changed since you loaded it. Load the latest version and try again."),
             CurrentUserIdentityException => (
                 StatusCodes.Status401Unauthorized,
                 "Invalid user identity",
@@ -34,6 +38,7 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
         {
             case RecipeNotFoundException:
             case RecipeForbiddenException:
+            case RecipeConflictException:
                 break;
             case CurrentUserIdentityException:
                 logger.LogWarning(exception, "The current user identity is invalid.");

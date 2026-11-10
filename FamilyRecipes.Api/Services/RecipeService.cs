@@ -4,6 +4,7 @@ using FamilyRecipes.Api.Exceptions;
 using FamilyRecipes.Api.Mappers;
 using FamilyRecipes.Api.Models;
 using FamilyRecipes.Api.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace FamilyRecipes.Api.Services;
 
@@ -91,6 +92,11 @@ public class RecipeService(
             throw new RecipeForbiddenException(id);
         }
 
+        if (!recipe.RowVersion.AsSpan().SequenceEqual(request.Version))
+        {
+            throw new RecipeConflictException(id);
+        }
+
         recipe.Title = request.Title;
         recipe.Description = request.Description;
         recipe.Instructions = request.Instructions;
@@ -103,7 +109,16 @@ public class RecipeService(
             recipe.Ingredients.Add(ingredient);
         }
 
-        await recipeRepository.SaveChangesAsync(cancellationToken);
+        recipeRepository.PrepareConcurrencyCheck(recipe, request.Version);
+
+        try
+        {
+            await recipeRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new RecipeConflictException(id);
+        }
 
         return recipe.ToResponse();
     }

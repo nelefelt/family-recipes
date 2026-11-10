@@ -11,4 +11,6 @@ public class Recipe
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public ICollection<Ingredient> Ingredients { get; set; } = [];
+
+    public byte[] RowVersion { get; set; } = [];
 }

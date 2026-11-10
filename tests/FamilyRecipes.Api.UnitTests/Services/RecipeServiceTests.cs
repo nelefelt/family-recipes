@@ -3,6 +3,7 @@ using FamilyRecipes.Api.Exceptions;
 using FamilyRecipes.Api.Models;
 using FamilyRecipes.Api.Repositories;
 using FamilyRecipes.Api.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 
@@ -108,6 +109,7 @@ public sealed class RecipeServiceTests
             Title = "Updated pancakes",
             Instructions = "Bake",
             Ingredients = [new IngredientRequest { Name = "Butter", Amount = 50, Unit = "g" }],
+            Version = [.. CurrentVersion],
         };
 
         await _sut.UpdateRecipeAsync(recipe.Id, request, cancellationToken);
@@ -122,8 +124,54 @@ public sealed class RecipeServiceTests
         Assert.Equal("Butter", ingredient.Name);
         Assert.Equal(50, ingredient.Amount);
         Assert.Equal("g", ingredient.Unit);
+        _recipeRepository.Received(1).PrepareConcurrencyCheck(recipe, request.Version);
         await _recipeRepository.Received(1).SaveChangesAsync(cancellationToken);
     }
+
+    [Fact]
+    public async Task UpdateRecipeAsync_WhenVersionIsStale_ThrowsConflictWithoutSaving()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var owner = CreateUser(id: 1, externalId: "user-a");
+        var recipe = CreateRecipe(id: 10, owner);
+        _recipeRepository.GetByIdForUpdateAsync(recipe.Id, cancellationToken).Returns(recipe);
+        _userService.GetOrCreateCurrentAsync(cancellationToken).Returns(owner);
+
+        var request = CreateUpdateRequest(version: [0, 0, 0, 0, 0, 0, 0, 1]);
+
+        await Assert.ThrowsAsync<RecipeConflictException>(
+            () => _sut.UpdateRecipeAsync(recipe.Id, request, cancellationToken));
+
+        Assert.Equal("Original title", recipe.Title);
+        await _recipeRepository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateRecipeAsync_WhenRecipeIsChangedBeforeSave_ThrowsConflict()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var owner = CreateUser(id: 1, externalId: "user-a");
+        var recipe = CreateRecipe(id: 10, owner);
+        _recipeRepository.GetByIdForUpdateAsync(recipe.Id, cancellationToken).Returns(recipe);
+        _userService.GetOrCreateCurrentAsync(cancellationToken).Returns(owner);
+
+        _recipeRepository
+            .SaveChangesAsync(cancellationToken)
+            .Returns(Task.FromException(new DbUpdateConcurrencyException()));
+
+        await Assert.ThrowsAsync<RecipeConflictException>(
+            () => _sut.UpdateRecipeAsync(recipe.Id, CreateUpdateRequest(version: [.. CurrentVersion]), cancellationToken));
+    }
+
+    private static readonly byte[] CurrentVersion = [0, 0, 0, 0, 0, 0, 0, 7];
+
+    private static UpdateRecipeRequest CreateUpdateRequest(byte[] version) => new()
+    {
+        Title = "Updated pancakes",
+        Instructions = "Bake",
+        Ingredients = [new IngredientRequest { Name = "Butter", Amount = 50, Unit = "g" }],
+        Version = version,
+    };
 
     private static User CreateUser(int id, string externalId) => new()
     {
@@ -142,5 +190,6 @@ public sealed class RecipeServiceTests
         CreatedByUser = owner,
         CreatedAt = Now.UtcDateTime,
         UpdatedAt = Now.UtcDateTime,
+        RowVersion = [.. CurrentVersion],
     };
 }

@@ -17,7 +17,8 @@ public static class RecipeMapper
             CreatedByUserName = recipe.CreatedByUser.Name,
             CreatedAt = recipe.CreatedAt,
             UpdatedAt = recipe.UpdatedAt,
-            Ingredients = recipe.Ingredients.Select(ingredient => ingredient.ToResponse()).ToList()
+            Ingredients = recipe.Ingredients.Select(ingredient => ingredient.ToResponse()).ToList(),
+            Version = recipe.RowVersion
         };
     }
 
