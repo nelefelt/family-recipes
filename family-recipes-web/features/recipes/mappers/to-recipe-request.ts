@@ -6,8 +6,8 @@ export function toCreateRecipeRequest(values: RecipeFormValues): CreateRecipeReq
   return toRecipeRequest(values);
 }
 
-export function toUpdateRecipeRequest(values: RecipeFormValues): UpdateRecipeRequest {
-  return toRecipeRequest(values);
+export function toUpdateRecipeRequest(values: RecipeFormValues, version: string): UpdateRecipeRequest {
+  return { ...toRecipeRequest(values), version };
 }
 
 function toRecipeRequest(values: RecipeFormValues) {

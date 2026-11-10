@@ -3,15 +3,18 @@
 import { CircleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RecipeRequestError } from "@/features/recipes/api/recipe-request-error";
 import { RecipeForm } from "@/features/recipes/components/recipe-form";
 import { useRecipe } from "@/features/recipes/hooks/use-recipe";
+import { useReloadRecipe } from "@/features/recipes/hooks/use-reload-recipe";
 import { useUpdateRecipe } from "@/features/recipes/hooks/use-update-recipe";
 import { toRecipeFormValues } from "@/features/recipes/mappers/to-recipe-form-values";
 import { toUpdateRecipeRequest } from "@/features/recipes/mappers/to-recipe-request";
 import type { RecipeFormValues } from "@/features/recipes/schemas/recipe-form-schema";
+import type { RecipeResponse } from "@/features/recipes/types/recipe";
 import { useCurrentUser } from "@/features/users/hooks/use-current-user";
 import { toastTitleMaxLength, truncateText } from "@/lib/truncate-text";
 
@@ -20,28 +23,27 @@ interface EditRecipeFormProps {
 }
 
 export const EditRecipeForm = ({ recipeId }: EditRecipeFormProps) => {
-  const router = useRouter();
   const { data: recipe, error, isPending, isPlaceholderData, isRefetching, refetch } = useRecipe(recipeId);
   const { data: currentUser } = useCurrentUser();
-  const updateRecipeMutation = useUpdateRecipe(recipeId);
 
   // The list cache can be older than the recipe, so the form waits for the detail response.
   if (isPending || isPlaceholderData) {
     return <EditRecipeFormSkeleton />;
   }
 
-  if (error instanceof RecipeRequestError && error.status === 404) {
-    return (
-      <EditRecipeMessage
-        title="Receptet finns inte"
-        description="Det kan ha tagits bort, eller så är länken fel."
-        href="/"
-        linkLabel="Till recepten"
-      />
-    );
-  }
+  // Only without data. A failed background refetch must not replace a form with unsaved changes.
+  if (recipe === undefined) {
+    if (error instanceof RecipeRequestError && error.status === 404) {
+      return (
+        <EditRecipeMessage
+          title="Receptet finns inte"
+          description="Det kan ha tagits bort, eller så är länken fel."
+          href="/"
+          linkLabel="Till recepten"
+        />
+      );
+    }
 
-  if (error || recipe === undefined) {
     return (
       <div
         role="alert"
@@ -80,24 +82,70 @@ export const EditRecipeForm = ({ recipeId }: EditRecipeFormProps) => {
     );
   }
 
+  // The key starts a new edit session for another recipe, so the snapshot never belongs to the previous one.
+  return <EditRecipeFormContent key={recipe.id} initialRecipe={recipe} />;
+};
+
+const reloadFailedMessage = "Den senaste versionen kunde inte hämtas. Dina ändringar finns kvar, försök igen.";
+
+interface EditRecipeFormContentProps {
+  initialRecipe: RecipeResponse;
+}
+
+// The form keeps the recipe it was opened with. Background refetches update the query cache but not
+// this snapshot, so a save never sends a newer version together with older form values.
+const EditRecipeFormContent = ({ initialRecipe }: EditRecipeFormContentProps) => {
+  const router = useRouter();
+  const [baseRecipe, setBaseRecipe] = useState(initialRecipe);
+  const updateRecipe = useUpdateRecipe(baseRecipe.id);
+  const reloadRecipe = useReloadRecipe(baseRecipe.id);
+  const hasConflict = updateRecipe.error instanceof RecipeRequestError && updateRecipe.error.status === 409;
+
   const handleSubmit = (values: RecipeFormValues) => {
-    updateRecipeMutation.mutate(toUpdateRecipeRequest(values), {
+    reloadRecipe.reset();
+    updateRecipe.mutate(toUpdateRecipeRequest(values, baseRecipe.version), {
       onSuccess: (updatedRecipe) => {
         toast.success("Receptet har uppdaterats", {
           description: `"${truncateText(updatedRecipe.title, toastTitleMaxLength)}" har sparats.`,
         });
-        router.replace(`/recipes/${recipeId}`);
+        router.replace(`/recipes/${baseRecipe.id}`);
+      },
+    });
+  };
+
+  // Replaces the user's unsaved changes, so it only runs when the user asks for it.
+  const handleReloadLatestVersion = () => {
+    reloadRecipe.mutate(undefined, {
+      onSuccess: (latestRecipe) => {
+        updateRecipe.reset();
+        setBaseRecipe(latestRecipe);
       },
     });
   };
 
   return (
     <RecipeForm
-      defaultValues={toRecipeFormValues(recipe)}
+      key={baseRecipe.version}
+      defaultValues={toRecipeFormValues(baseRecipe)}
       submitLabel="Spara ändringar"
       pendingLabel="Sparar..."
-      isPending={updateRecipeMutation.isPending}
-      errorMessage={updateRecipeMutation.error?.message}
+      isPending={updateRecipe.isPending}
+      // A save during a reload would send the old version, and the reload would then reset the save.
+      disabled={reloadRecipe.isPending}
+      errorMessage={reloadRecipe.isError ? reloadFailedMessage : updateRecipe.error?.message}
+      errorAction={
+        hasConflict ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleReloadLatestVersion}
+            disabled={reloadRecipe.isPending}
+            className="h-10 rounded-xl px-4"
+          >
+            {reloadRecipe.isPending ? "Hämtar..." : "Ladda senaste versionen"}
+          </Button>
+        ) : undefined
+      }
       onSubmit={handleSubmit}
     />
   );

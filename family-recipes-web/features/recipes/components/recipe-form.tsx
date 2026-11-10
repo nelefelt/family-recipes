@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, FileText, Leaf, ListOrdered, Loader2, Plus } from "lucide-react";
+import type { ReactNode } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,9 @@ type RecipeFormProps = {
   submitLabel: string;
   pendingLabel: string;
   isPending: boolean;
+  disabled?: boolean;
   errorMessage?: string;
+  errorAction?: ReactNode;
   onSubmit: (values: RecipeFormValues) => void;
 };
 
@@ -26,7 +29,9 @@ export const RecipeForm = ({
   submitLabel,
   pendingLabel,
   isPending,
+  disabled = false,
   errorMessage,
+  errorAction,
   onSubmit,
 }: RecipeFormProps) => {
   const {
@@ -183,13 +188,16 @@ export const RecipeForm = ({
           className="flex items-start gap-2.5 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-sm text-destructive"
         >
           <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <p>{errorMessage}</p>
+          <div className="flex flex-col items-start gap-3">
+            <p>{errorMessage}</p>
+            {errorAction}
+          </div>
         </div>
       ) : null}
 
       <Button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || disabled}
         className="h-14 w-full rounded-2xl text-base font-semibold shadow-md shadow-primary/15 transition-all hover:-translate-y-px hover:shadow-lg hover:shadow-primary/20 active:translate-y-0 disabled:translate-y-0 disabled:bg-primary disabled:opacity-80"
       >
         {isPending ? (

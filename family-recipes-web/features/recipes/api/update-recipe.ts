@@ -35,6 +35,7 @@ function getUpdateRecipeErrorMessage(status: number): string {
   if (status === 401) return "Du behöver logga in igen för att redigera receptet.";
   if (status === 403) return "Du kan bara redigera dina egna recept.";
   if (status === 404) return "Receptet finns inte.";
+  if (status === 409) return "Receptet har ändrats sedan du öppnade det, till exempel i en annan flik.";
 
   return "Receptet kunde inte sparas. Försök igen.";
 }

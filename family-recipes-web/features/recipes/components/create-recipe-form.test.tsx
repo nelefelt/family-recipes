@@ -19,6 +19,7 @@ const createdRecipe: RecipeResponse = {
   createdByUserName: "Test",
   createdAt: "2026-01-01T12:00:00Z",
   updatedAt: "2026-01-01T12:00:00Z",
+  version: "AAAAAAAAB9E=",
   ingredients: [{ id: 1, name: "Pasta", amount: null, unit: null }],
 };
 

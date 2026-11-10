@@ -209,6 +209,15 @@ export interface paths {
                         "application/json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
         post?: never;
@@ -357,12 +366,16 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             ingredients: components["schemas"]["IngredientResponse"][];
+            /** Format: byte */
+            version: string;
         };
         UpdateRecipeRequest: {
             title: string;
             description?: null | string;
             instructions: string;
             ingredients: components["schemas"]["IngredientRequest"][];
+            /** Format: byte */
+            version: string;
         };
         UserResponse: {
             /** Format: int32 */
