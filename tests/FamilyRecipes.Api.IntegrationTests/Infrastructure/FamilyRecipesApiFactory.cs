@@ -45,20 +45,6 @@ public sealed class FamilyRecipesApiFactory : WebApplicationFactory<Program>, IA
             });
     }
 
-    // Returns a client signed in as the given user. Pass scope: null to leave out the required scope (403).
-    public HttpClient CreateAuthenticatedClient(string externalId, string name, string? scope = "access_as_user")
-    {
-        var client = CreateClient();
-        client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, externalId);
-        client.DefaultRequestHeaders.Add(TestAuthHandler.UserNameHeader, name);
-
-        if (scope is not null)
-        {
-            client.DefaultRequestHeaders.Add(TestAuthHandler.ScopeHeader, scope);
-        }
-
-        return client;
-    }
 
     // Deletes all rows and keeps the schema and migration history, so the next test starts empty.
     public async Task ResetDatabaseAsync()
