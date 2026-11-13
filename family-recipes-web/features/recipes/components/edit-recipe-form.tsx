@@ -3,11 +3,12 @@
 import { CircleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RecipeRequestError } from "@/features/recipes/api/recipe-request-error";
 import { RecipeForm } from "@/features/recipes/components/recipe-form";
+import { RecipeFormPageHeader, SaveRecipeButton } from "@/features/recipes/components/recipe-form-page-header";
 import { useRecipe } from "@/features/recipes/hooks/use-recipe";
 import { useReloadRecipe } from "@/features/recipes/hooks/use-reload-recipe";
 import { useUpdateRecipe } from "@/features/recipes/hooks/use-update-recipe";
@@ -28,63 +29,98 @@ export const EditRecipeForm = ({ recipeId }: EditRecipeFormProps) => {
 
   // The list cache can be older than the recipe, so the form waits for the detail response.
   if (isPending || isPlaceholderData) {
-    return <EditRecipeFormSkeleton />;
+    return (
+      <EditRecipeLayout recipeId={recipeId}>
+        <EditRecipeFormSkeleton />
+      </EditRecipeLayout>
+    );
   }
 
   // Only without data. A failed background refetch must not replace a form with unsaved changes.
   if (recipe === undefined) {
     if (error instanceof RecipeRequestError && error.status === 404) {
       return (
-        <EditRecipeMessage
-          title="Receptet finns inte"
-          description="Det kan ha tagits bort, eller så är länken fel."
-          href="/"
-          linkLabel="Till recepten"
-        />
+        <EditRecipeLayout recipeId={recipeId}>
+          <EditRecipeMessage
+            title="Receptet finns inte"
+            description="Det kan ha tagits bort, eller så är länken fel."
+            href="/"
+            linkLabel="Till recepten"
+          />
+        </EditRecipeLayout>
       );
     }
 
     return (
-      <div
-        role="alert"
-        className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-4 text-sm text-destructive"
-      >
-        <p className="flex items-start gap-2.5">
-          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          {error?.message ?? "Receptet kunde inte hämtas. Försök igen."}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void refetch()}
-          disabled={isRefetching}
-          className="h-10 rounded-xl px-4"
+      <EditRecipeLayout recipeId={recipeId}>
+        <div
+          role="alert"
+          className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-4 text-sm text-destructive"
         >
-          Försök igen
-        </Button>
-      </div>
+          <p className="flex items-start gap-2.5">
+            <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {error?.message ?? "Receptet kunde inte hämtas. Försök igen."}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void refetch()}
+            disabled={isRefetching}
+            className="h-10 rounded-xl px-4"
+          >
+            Försök igen
+          </Button>
+        </div>
+      </EditRecipeLayout>
     );
   }
 
   // CurrentUserBootstrap renders pages only after the user has loaded, so this is not an ownership failure.
   if (currentUser === undefined) {
-    return <EditRecipeFormSkeleton />;
+    return (
+      <EditRecipeLayout recipeId={recipeId}>
+        <EditRecipeFormSkeleton />
+      </EditRecipeLayout>
+    );
   }
 
   if (currentUser.id !== recipe.createdByUserId) {
     return (
-      <EditRecipeMessage
-        title="Du kan inte redigera receptet"
-        description="Du kan bara redigera recept som du själv har skapat."
-        href={`/recipes/${recipeId}`}
-        linkLabel="Tillbaka till receptet"
-      />
+      <EditRecipeLayout recipeId={recipeId}>
+        <EditRecipeMessage
+          title="Du kan inte redigera receptet"
+          description="Du kan bara redigera recept som du själv har skapat."
+          href={`/recipes/${recipeId}`}
+          linkLabel="Tillbaka till receptet"
+        />
+      </EditRecipeLayout>
     );
   }
 
   // The key starts a new edit session for another recipe, so the snapshot never belongs to the previous one.
   return <EditRecipeFormContent key={recipe.id} initialRecipe={recipe} />;
 };
+
+const formId = "edit-recipe-form";
+
+interface EditRecipeLayoutProps {
+  recipeId: number;
+  action?: ReactNode;
+  children: ReactNode;
+}
+
+// The header is shown in every state, so the back link is always there. Only the form gets a save button.
+const EditRecipeLayout = ({ recipeId, action, children }: EditRecipeLayoutProps) => (
+  <>
+    <RecipeFormPageHeader
+      title="Redigera recept"
+      backHref={`/recipes/${recipeId}`}
+      backLabel="Tillbaka till receptet"
+      action={action}
+    />
+    {children}
+  </>
+);
 
 const reloadFailedMessage = "Den senaste versionen kunde inte hämtas. Dina ändringar finns kvar, försök igen.";
 
@@ -124,30 +160,38 @@ const EditRecipeFormContent = ({ initialRecipe }: EditRecipeFormContentProps) =>
   };
 
   return (
-    <RecipeForm
-      key={baseRecipe.version}
-      defaultValues={toRecipeFormValues(baseRecipe)}
-      submitLabel="Spara ändringar"
-      pendingLabel="Sparar..."
-      isPending={updateRecipe.isPending}
-      // A save during a reload would send the old version, and the reload would then reset the save.
-      disabled={reloadRecipe.isPending}
-      errorMessage={reloadRecipe.isError ? reloadFailedMessage : updateRecipe.error?.message}
-      errorAction={
-        hasConflict ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleReloadLatestVersion}
-            disabled={reloadRecipe.isPending}
-            className="h-10 rounded-xl px-4"
-          >
-            {reloadRecipe.isPending ? "Hämtar..." : "Ladda senaste versionen"}
-          </Button>
-        ) : undefined
+    <EditRecipeLayout
+      recipeId={baseRecipe.id}
+      action={
+        <SaveRecipeButton
+          formId={formId}
+          isPending={updateRecipe.isPending}
+          // A save during a reload would send the old version, and the reload would then reset the save.
+          disabled={reloadRecipe.isPending}
+        />
       }
-      onSubmit={handleSubmit}
-    />
+    >
+      <RecipeForm
+        key={baseRecipe.version}
+        id={formId}
+        defaultValues={toRecipeFormValues(baseRecipe)}
+        errorMessage={reloadRecipe.isError ? reloadFailedMessage : updateRecipe.error?.message}
+        errorAction={
+          hasConflict ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReloadLatestVersion}
+              disabled={reloadRecipe.isPending}
+              className="h-10 rounded-xl px-4"
+            >
+              {reloadRecipe.isPending ? "Hämtar..." : "Ladda senaste versionen"}
+            </Button>
+          ) : undefined
+        }
+        onSubmit={handleSubmit}
+      />
+    </EditRecipeLayout>
   );
 };
 

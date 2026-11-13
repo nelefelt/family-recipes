@@ -72,6 +72,11 @@ export const IngredientFormRow = ({
             aria-invalid={Boolean(unitError)}
             aria-describedby={unitError ? unitErrorId : undefined}
             autoComplete="off"
+            // Units are written in lower case (g, dl, msk). Stops the phone keyboard from capitalising
+            // the first letter and autocorrect from turning "dl" into a word.
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             className={fieldClassName}
             {...register(`ingredients.${index}.unit`)}
           />

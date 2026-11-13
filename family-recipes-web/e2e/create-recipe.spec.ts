@@ -23,12 +23,13 @@ test("creates a recipe that is still there after a reload", async ({ page }) => 
   await page.getByLabel("Mängd", { exact: true }).fill("250");
   await page.getByLabel("Enhet", { exact: true }).fill("g");
   await page.getByLabel("Steg 1", { exact: true }).fill("Koka pastan");
-  await page.getByRole("button", { name: "Skapa recept" }).click();
+  await page.getByRole("button", { name: "Spara" }).click();
 
   // The toast is shown when the API has answered, so the recipe has been saved.
   await expect(page.getByText("Receptet har skapats")).toBeVisible();
 
-  await page.getByRole("link", { name: "Tillbaka till recept" }).click();
+  // After saving, the app goes back to the start page by itself.
+  await expect(page).toHaveURL(/\/$/);
 
   // Checked before the click, so a missing recipe fails here with a clear message instead of a timeout.
   const recipeLink = page.getByRole("link", { name: title });

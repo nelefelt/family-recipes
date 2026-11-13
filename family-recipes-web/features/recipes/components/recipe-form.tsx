@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleAlert, FileText, Leaf, ListOrdered, Loader2, Plus } from "lucide-react";
-import type { ReactNode } from "react";
+import { CircleAlert, FileText, Leaf, ListOrdered, Plus } from "lucide-react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,26 +14,16 @@ import { createEmptyIngredient } from "@/features/recipes/schemas/recipe-form-de
 import { recipeFormSchema, type RecipeFormValues } from "@/features/recipes/schemas/recipe-form-schema";
 
 type RecipeFormProps = {
+  // Lets a submit button outside the form, such as the one in the page header, submit it.
+  id: string;
   defaultValues: RecipeFormValues;
-  submitLabel: string;
-  pendingLabel: string;
-  isPending: boolean;
-  disabled?: boolean;
   errorMessage?: string;
   errorAction?: ReactNode;
   onSubmit: (values: RecipeFormValues) => void;
 };
 
-export const RecipeForm = ({
-  defaultValues,
-  submitLabel,
-  pendingLabel,
-  isPending,
-  disabled = false,
-  errorMessage,
-  errorAction,
-  onSubmit,
-}: RecipeFormProps) => {
+export const RecipeForm = ({ id, defaultValues, errorMessage, errorAction, onSubmit }: RecipeFormProps) => {
+  const errorRef = useRef<HTMLDivElement>(null);
   const {
     register,
     control,
@@ -52,8 +42,29 @@ export const RecipeForm = ({
 
   const canRemoveIngredient = fields.length > 1;
 
+  // Saving starts from the header, so a user far down the form would not see an error at the top.
+  useEffect(() => {
+    if (errorMessage) {
+      errorRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    }
+  }, [errorMessage]);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex w-full min-w-0 flex-col gap-4">
+    <form id={id} onSubmit={handleSubmit(onSubmit)} className="flex w-full min-w-0 flex-col gap-4">
+      {errorMessage ? (
+        <div
+          ref={errorRef}
+          role="alert"
+          className="flex scroll-mt-20 items-start gap-2.5 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <div className="flex flex-col items-start gap-3">
+            <p>{errorMessage}</p>
+            {errorAction}
+          </div>
+        </div>
+      ) : null}
+
       <section className="flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-sm ring-1 ring-border/50 sm:p-6">
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-xl bg-secondary/70 text-primary">
@@ -181,34 +192,6 @@ export const RecipeForm = ({
           ) : null}
         </div>
       </section>
-
-      {errorMessage ? (
-        <div
-          role="alert"
-          className="flex items-start gap-2.5 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-        >
-          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <div className="flex flex-col items-start gap-3">
-            <p>{errorMessage}</p>
-            {errorAction}
-          </div>
-        </div>
-      ) : null}
-
-      <Button
-        type="submit"
-        disabled={isPending || disabled}
-        className="h-14 w-full rounded-2xl text-base font-semibold shadow-md shadow-primary/15 transition-all hover:-translate-y-px hover:shadow-lg hover:shadow-primary/20 active:translate-y-0 disabled:translate-y-0 disabled:bg-primary disabled:opacity-80"
-      >
-        {isPending ? (
-          <>
-            <Loader2 aria-hidden="true" className="animate-spin" />
-            {pendingLabel}
-          </>
-        ) : (
-          submitLabel
-        )}
-      </Button>
     </form>
   );
 };
