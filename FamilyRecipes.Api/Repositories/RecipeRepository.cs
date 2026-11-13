@@ -38,9 +38,25 @@ public class RecipeRepository(AppDbContext dbContext) : IRecipeRepository
         await dbContext.Recipes.AddAsync(recipe, cancellationToken);
     }
 
-    public void Delete(Recipe recipe)
+    // One DELETE statement with no prior read, so nothing can change in between. The database's
+    // ON DELETE CASCADE removes the ingredients.
+    public Task<int> DeleteOwnedAsync(int id, int ownerId, CancellationToken cancellationToken)
     {
-        dbContext.Recipes.Remove(recipe);
+        return dbContext.Recipes
+            .Where(recipe => recipe.Id == id && recipe.CreatedByUserId == ownerId)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    public void PrepareConcurrencyCheck(Recipe recipe, byte[] expectedVersion)
+    {
+        var entry = dbContext.Entry(recipe);
+
+        // EF Core puts the original RowVersion in the UPDATE's WHERE clause, so use the client's version.
+        entry.Property(r => r.RowVersion).OriginalValue = expectedVersion;
+
+        // Ingredients live in their own table. Without this, an ingredient-only change would not
+        // update the recipe row, so the version would be neither checked nor changed.
+        entry.Property(r => r.UpdatedAt).IsModified = true;
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)

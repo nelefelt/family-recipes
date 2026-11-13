@@ -4,6 +4,7 @@ using FamilyRecipes.Api.Exceptions;
 using FamilyRecipes.Api.Mappers;
 using FamilyRecipes.Api.Models;
 using FamilyRecipes.Api.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace FamilyRecipes.Api.Services;
 
@@ -35,7 +36,7 @@ public class RecipeService(
 
     public async Task DeleteRecipeAsync(int id, CancellationToken cancellationToken)
     {
-        var recipe = await recipeRepository.GetByIdForUpdateAsync(id, cancellationToken);
+        var recipe = await recipeRepository.GetByIdAsync(id, cancellationToken);
 
         if (recipe is null)
         {
@@ -49,8 +50,13 @@ public class RecipeService(
             throw new RecipeForbiddenException(id);
         }
 
-        recipeRepository.Delete(recipe);
-        await recipeRepository.SaveChangesAsync(cancellationToken);
+        var deletedCount = await recipeRepository.DeleteOwnedAsync(id, currentUser.Id, cancellationToken);
+
+        // Another request deleted the recipe after our read.
+        if (deletedCount == 0)
+        {
+            throw new RecipeNotFoundException(id);
+        }
     }
 
     public async Task<RecipeResponse> CreateRecipeAsync(CreateRecipeRequest request, CancellationToken cancellationToken)
@@ -91,6 +97,11 @@ public class RecipeService(
             throw new RecipeForbiddenException(id);
         }
 
+        if (!recipe.RowVersion.AsSpan().SequenceEqual(request.Version))
+        {
+            throw new RecipeConflictException(id);
+        }
+
         recipe.Title = request.Title;
         recipe.Description = request.Description;
         recipe.Instructions = request.Instructions;
@@ -103,7 +114,16 @@ public class RecipeService(
             recipe.Ingredients.Add(ingredient);
         }
 
-        await recipeRepository.SaveChangesAsync(cancellationToken);
+        recipeRepository.PrepareConcurrencyCheck(recipe, request.Version);
+
+        try
+        {
+            await recipeRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new RecipeConflictException(id);
+        }
 
         return recipe.ToResponse();
     }

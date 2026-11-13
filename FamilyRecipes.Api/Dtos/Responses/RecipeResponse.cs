@@ -11,4 +11,6 @@ public class RecipeResponse
     public required DateTime CreatedAt { get; set; }
     public required DateTime UpdatedAt { get; set; }
     public required IReadOnlyList<IngredientResponse> Ingredients { get; set; }
+
+    public required byte[] Version { get; set; }
 }

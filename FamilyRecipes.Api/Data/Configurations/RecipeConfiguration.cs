@@ -25,6 +25,9 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         builder.Property(recipe => recipe.UpdatedAt)
             .IsRequired();
 
+        builder.Property(recipe => recipe.RowVersion)
+            .IsRowVersion();
+
         builder.HasOne(recipe => recipe.CreatedByUser)
             .WithMany(user => user.Recipes)
             .HasForeignKey(recipe => recipe.CreatedByUserId);
