@@ -24,6 +24,10 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
                 StatusCodes.Status409Conflict,
                 "Recipe conflict",
                 "The recipe has been changed since you loaded it. Load the latest version and try again."),
+            IdempotencyKeyReusedException => (
+                StatusCodes.Status422UnprocessableEntity,
+                "Idempotency key reused",
+                "This Idempotency-Key was already used with different content. Send a new key for a new recipe."),
             CurrentUserIdentityException => (
                 StatusCodes.Status401Unauthorized,
                 "Invalid user identity",
@@ -39,6 +43,7 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
             case RecipeNotFoundException:
             case RecipeForbiddenException:
             case RecipeConflictException:
+            case IdempotencyKeyReusedException:
                 break;
             case CurrentUserIdentityException:
                 logger.LogWarning(exception, "The current user identity is invalid.");

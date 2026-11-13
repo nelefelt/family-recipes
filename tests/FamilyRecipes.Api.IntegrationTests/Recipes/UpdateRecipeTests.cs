@@ -159,10 +159,7 @@ public sealed class UpdateRecipeTests(FamilyRecipesApiFactory factory) : Integra
         await using var frozenClockFactory = Factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(frozenTime)));
 
-        var client = frozenClockFactory.CreateClient();
-        client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, "user-a");
-        client.DefaultRequestHeaders.Add(TestAuthHandler.UserNameHeader, "User A");
-        client.DefaultRequestHeaders.Add(TestAuthHandler.ScopeHeader, "access_as_user");
+        var client = frozenClockFactory.CreateAuthenticatedClient("user-a", "User A");
 
         var response = await client.PutAsJsonAsync(
             $"/api/recipes/{recipe.Id}",

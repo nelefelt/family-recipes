@@ -6,7 +6,6 @@ using FamilyRecipes.Api.IntegrationTests.Infrastructure;
 using FamilyRecipes.Api.Models;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FamilyRecipes.Api.IntegrationTests.Users;
@@ -60,7 +59,7 @@ public sealed class CurrentUserTests(FamilyRecipesApiFactory factory) : Integrat
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         User? concurrentlyCreatedUser = null;
-        var interceptor = new BeforeUserInsertInterceptor(async () =>
+        var interceptor = new BeforeInsertInterceptor<User>(async () =>
             concurrentlyCreatedUser = await SeedUserAsync("user-a", "User A"));
 
         // Only this factory has the interceptor. SeedUserAsync uses the base factory, so it does not trigger it.
@@ -68,10 +67,7 @@ public sealed class CurrentUserTests(FamilyRecipesApiFactory factory) : Integrat
             builder.ConfigureTestServices(services =>
                 services.ConfigureDbContext<AppDbContext>(options => options.AddInterceptors(interceptor))));
 
-        var client = racingFactory.CreateClient();
-        client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, "user-a");
-        client.DefaultRequestHeaders.Add(TestAuthHandler.UserNameHeader, "User A");
-        client.DefaultRequestHeaders.Add(TestAuthHandler.ScopeHeader, "access_as_user");
+        var client = racingFactory.CreateAuthenticatedClient("user-a", "User A");
 
         var response = await client.PutAsync("/api/users/me", null, cancellationToken);
 
@@ -102,28 +98,5 @@ public sealed class CurrentUserTests(FamilyRecipesApiFactory factory) : Integrat
             responses.Select(response => response.Content.ReadFromJsonAsync<UserResponse>(cancellationToken)));
         var storedUser = Assert.Single(await GetUsersAsync());
         Assert.All(users, user => Assert.Equal(storedUser.Id, user?.Id));
-    }
-
-    // Runs the callback once, just before the first SaveChanges that inserts a user.
-    private sealed class BeforeUserInsertInterceptor(Func<Task> beforeInsert) : SaveChangesInterceptor
-    {
-        private int _hasRun;
-
-        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
-            DbContextEventData eventData,
-            InterceptionResult<int> result,
-            CancellationToken cancellationToken = default)
-        {
-            var insertsUser = eventData.Context?.ChangeTracker
-                .Entries<User>()
-                .Any(entry => entry.State == EntityState.Added) ?? false;
-
-            if (insertsUser && Interlocked.Exchange(ref _hasRun, 1) == 0)
-            {
-                await beforeInsert();
-            }
-
-            return result;
-        }
     }
 }

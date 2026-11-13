@@ -78,7 +78,7 @@ public sealed class RecipeServiceTests
             ],
         };
 
-        var response = await _sut.CreateRecipeAsync(request, cancellationToken);
+        var response = await _sut.CreateRecipeAsync(request, idempotencyKey: null, cancellationToken);
 
         Assert.NotNull(addedRecipe);
         await _recipeRepository.Received(1).AddAsync(addedRecipe, cancellationToken);
@@ -105,6 +105,68 @@ public sealed class RecipeServiceTests
         Assert.Equal(owner.Id, response.CreatedByUserId);
         await _recipeRepository.Received(1).SaveChangesAsync(cancellationToken);
     }
+
+    [Fact]
+    public async Task CreateRecipeAsync_WhenKeyWasUsedForTheSameRequest_ReturnsThatRecipeWithoutAdding()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var owner = CreateUser(id: 1, externalId: "user-a");
+        var key = Guid.NewGuid();
+        _userService.GetOrCreateCurrentAsync(cancellationToken).Returns(owner);
+        var firstRecipe = await CreateWithKeyAsync(owner, key, CreateCreateRequest("Pancakes"), cancellationToken);
+        _recipeRepository.ClearReceivedCalls();
+        _recipeRepository.GetByIdempotencyKeyAsync(owner.Id, key, cancellationToken).Returns(firstRecipe);
+
+        var response = await _sut.CreateRecipeAsync(CreateCreateRequest("Pancakes"), key, cancellationToken);
+
+        Assert.Equal(firstRecipe.Id, response.Id);
+        await _recipeRepository.DidNotReceive().AddAsync(Arg.Any<Recipe>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateRecipeAsync_WhenKeyWasUsedForADifferentRequest_ThrowsWithoutAdding()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var owner = CreateUser(id: 1, externalId: "user-a");
+        var key = Guid.NewGuid();
+        _userService.GetOrCreateCurrentAsync(cancellationToken).Returns(owner);
+        var firstRecipe = await CreateWithKeyAsync(owner, key, CreateCreateRequest("Pancakes"), cancellationToken);
+        _recipeRepository.ClearReceivedCalls();
+        _recipeRepository.GetByIdempotencyKeyAsync(owner.Id, key, cancellationToken).Returns(firstRecipe);
+
+        await Assert.ThrowsAsync<IdempotencyKeyReusedException>(
+            () => _sut.CreateRecipeAsync(CreateCreateRequest("Waffles"), key, cancellationToken));
+
+        await _recipeRepository.DidNotReceive().AddAsync(Arg.Any<Recipe>(), Arg.Any<CancellationToken>());
+    }
+
+    // Creates a recipe through the service, so the stored request hash is computed the real way.
+    private async Task<Recipe> CreateWithKeyAsync(
+        User owner,
+        Guid key,
+        CreateRecipeRequest request,
+        CancellationToken cancellationToken)
+    {
+        Recipe? addedRecipe = null;
+        _recipeRepository
+            .AddAsync(Arg.Do<Recipe>(recipe => addedRecipe = recipe), cancellationToken)
+            .Returns(Task.CompletedTask);
+
+        await _sut.CreateRecipeAsync(request, key, cancellationToken);
+
+        Assert.NotNull(addedRecipe);
+        Assert.Equal(key, addedRecipe.IdempotencyKey);
+        Assert.NotNull(addedRecipe.IdempotencyRequestHash);
+        addedRecipe.Id = 42;
+        return addedRecipe;
+    }
+
+    private static CreateRecipeRequest CreateCreateRequest(string title) => new()
+    {
+        Title = title,
+        Instructions = "Mix and fry",
+        Ingredients = [new IngredientRequest { Name = "Flour", Amount = 2, Unit = "dl" }],
+    };
 
     [Fact]
     public async Task UpdateRecipeAsync_WhenUserOwnsRecipe_ReplacesIngredientsAndSetsUpdatedAt()

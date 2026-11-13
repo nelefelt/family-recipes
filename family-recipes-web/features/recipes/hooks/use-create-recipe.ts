@@ -7,15 +7,20 @@ import { createRecipe } from "@/features/recipes/api/create-recipe";
 import { recipeKeys } from "@/features/recipes/recipe-keys";
 import type { CreateRecipeRequest } from "@/features/recipes/types/recipe";
 
+interface CreateRecipeVariables {
+  request: CreateRecipeRequest;
+  idempotencyKey: string;
+}
+
 export const useCreateRecipe = () => {
   const { instance, accounts } = useMsal();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (request: CreateRecipeRequest) => {
+    mutationFn: async ({ request, idempotencyKey }: CreateRecipeVariables) => {
       const accessToken = await getAccessToken(instance, accounts);
 
-      return createRecipe(request, accessToken);
+      return createRecipe(request, idempotencyKey, accessToken);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: recipeKeys.all }),
   });

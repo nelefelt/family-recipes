@@ -7,7 +7,10 @@ public interface IRecipeService
 {
     Task<IReadOnlyList<RecipeResponse>> GetRecipesAsync(CancellationToken cancellationToken);
     Task<RecipeResponse> GetRecipeByIdAsync(int id, CancellationToken cancellationToken);
-    Task<RecipeResponse> CreateRecipeAsync(CreateRecipeRequest request, CancellationToken cancellationToken);
+    Task<RecipeResponse> CreateRecipeAsync(
+        CreateRecipeRequest request,
+        Guid? idempotencyKey,
+        CancellationToken cancellationToken);
     Task<RecipeResponse> UpdateRecipeAsync(int id, UpdateRecipeRequest request, CancellationToken cancellationToken);
     Task DeleteRecipeAsync(int id, CancellationToken cancellationToken);
 }

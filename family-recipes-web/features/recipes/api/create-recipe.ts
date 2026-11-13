@@ -1,12 +1,17 @@
 import { apiClient } from "@/lib/api/client";
+import { RecipeRequestError } from "@/features/recipes/api/recipe-request-error";
 import type { CreateRecipeRequest, RecipeResponse } from "@/features/recipes/types/recipe";
 
 export const createRecipe = async (
   request: CreateRecipeRequest,
+  idempotencyKey: string,
   accessToken: string,
 ): Promise<RecipeResponse> => {
   const { data, error, response } = await apiClient
     .POST("/api/recipes", {
+      params: {
+        header: { "Idempotency-Key": idempotencyKey },
+      },
       body: request,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -19,7 +24,7 @@ export const createRecipe = async (
     });
 
   if (error !== undefined || !response.ok || data === undefined) {
-    throw new Error(getCreateRecipeErrorMessage(response.status), { cause: error });
+    throw new RecipeRequestError(response.status, getCreateRecipeErrorMessage(response.status), error);
   }
 
   return data;
@@ -28,6 +33,9 @@ export const createRecipe = async (
 function getCreateRecipeErrorMessage(status: number): string {
   if (status === 400) return "Receptet kunde inte sparas. Kontrollera fälten och försök igen.";
   if (status === 401 || status === 403) return "Du behöver logga in igen för att skapa recept.";
+  if (status === 422) {
+    return "Ett tidigare försök kan redan ha sparat receptet. Kontrollera receptlistan. Sparar du igen skapas ett nytt recept.";
+  }
 
   return "Något gick fel när receptet skulle skapas. Försök igen.";
 }
