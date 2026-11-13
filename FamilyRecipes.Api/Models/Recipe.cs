@@ -13,4 +13,8 @@ public class Recipe
     public ICollection<Ingredient> Ingredients { get; set; } = [];
 
     public byte[] RowVersion { get; set; } = [];
+
+    public Guid? IdempotencyKey { get; set; }
+
+    public byte[]? IdempotencyRequestHash { get; set; }
 }

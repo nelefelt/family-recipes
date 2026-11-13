@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+using FamilyRecipes.Api.Data;
 using FamilyRecipes.Api.DTOs.Requests;
 using FamilyRecipes.Api.DTOs.Responses;
 using FamilyRecipes.Api.Exceptions;
@@ -59,9 +62,25 @@ public class RecipeService(
         }
     }
 
-    public async Task<RecipeResponse> CreateRecipeAsync(CreateRecipeRequest request, CancellationToken cancellationToken)
+    public async Task<RecipeResponse> CreateRecipeAsync(
+        CreateRecipeRequest request,
+        Guid? idempotencyKey,
+        CancellationToken cancellationToken)
     {
         var user = await userService.GetOrCreateCurrentAsync(cancellationToken);
+        byte[]? requestHash = null;
+
+        if (idempotencyKey is Guid key)
+        {
+            requestHash = ComputeRequestHash(request);
+            var existingRecipe = await recipeRepository.GetByIdempotencyKeyAsync(user.Id, key, cancellationToken);
+
+            if (existingRecipe is not null)
+            {
+                return ReturnExistingOrThrow(existingRecipe, key, requestHash);
+            }
+        }
+
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var recipe = new Recipe
         {
@@ -72,13 +91,57 @@ public class RecipeService(
             CreatedByUser = user,
             CreatedAt = now,
             UpdatedAt = now,
-            Ingredients = ToIngredients(request.Ingredients)
+            Ingredients = ToIngredients(request.Ingredients),
+            IdempotencyKey = idempotencyKey,
+            IdempotencyRequestHash = requestHash
         };
 
         await recipeRepository.AddAsync(recipe, cancellationToken);
-        await recipeRepository.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await recipeRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (
+            idempotencyKey is Guid conflictingKey &&
+            requestHash is not null &&
+            exception.IsUniqueConstraintViolation())
+        {
+            // A concurrent request with the same key saved first. The unique index kept it to one recipe.
+            recipeRepository.Detach(recipe);
+
+            var concurrentlyCreatedRecipe = await recipeRepository.GetByIdempotencyKeyAsync(
+                user.Id,
+                conflictingKey,
+                cancellationToken);
+
+            if (concurrentlyCreatedRecipe is null)
+            {
+                throw;
+            }
+
+            return ReturnExistingOrThrow(concurrentlyCreatedRecipe, conflictingKey, requestHash);
+        }
 
         return recipe.ToResponse();
+    }
+
+    // Both paths, the direct lookup and the one after a unique violation, end here, so the same key with
+    // different content is always rejected.
+    private static RecipeResponse ReturnExistingOrThrow(Recipe existingRecipe, Guid idempotencyKey, byte[] requestHash)
+    {
+        if (existingRecipe.IdempotencyRequestHash is null ||
+            !existingRecipe.IdempotencyRequestHash.AsSpan().SequenceEqual(requestHash))
+        {
+            throw new IdempotencyKeyReusedException(idempotencyKey);
+        }
+
+        return existingRecipe.ToResponse();
+    }
+
+    private static byte[] ComputeRequestHash(CreateRecipeRequest request)
+    {
+        return SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(request));
     }
 
     public async Task<RecipeResponse> UpdateRecipeAsync(int id, UpdateRecipeRequest request, CancellationToken cancellationToken)

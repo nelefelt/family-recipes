@@ -71,6 +71,13 @@ namespace FamilyRecipes.Api.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<Guid?>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("IdempotencyRequestHash")
+                        .HasMaxLength(32)
+                        .HasColumnType("varbinary(32)");
+
                     b.Property<string>("Instructions")
                         .IsRequired()
                         .HasMaxLength(10000)
@@ -93,6 +100,10 @@ namespace FamilyRecipes.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CreatedByUserId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
 
                     b.ToTable("Recipes");
                 });

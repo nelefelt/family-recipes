@@ -37,9 +37,14 @@ public class RecipesController(IRecipeService recipeService) : ControllerBase
     [Consumes("application/json")]
     [ProducesResponseType<RecipeResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<RecipeResponse>> CreateRecipe(CreateRecipeRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<RecipeResponse>> CreateRecipe(
+        CreateRecipeRequest request,
+        // Optional. Retrying with the same key returns the recipe from the first attempt instead of a duplicate.
+        [FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
+        CancellationToken cancellationToken)
     {
-        var recipe = await recipeService.CreateRecipeAsync(request, cancellationToken);
+        var recipe = await recipeService.CreateRecipeAsync(request, idempotencyKey, cancellationToken);
 
         return CreatedAtAction(nameof(GetRecipeById), new { recipeId = recipe.Id }, recipe);
     }

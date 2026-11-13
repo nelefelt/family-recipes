@@ -33,9 +33,32 @@ public class RecipeRepository(AppDbContext dbContext) : IRecipeRepository
             .FirstOrDefaultAsync(recipe => recipe.Id == id, cancellationToken);
     }
 
+    public Task<Recipe?> GetByIdempotencyKeyAsync(int ownerId, Guid idempotencyKey, CancellationToken cancellationToken)
+    {
+        return dbContext.Recipes
+            .AsNoTracking()
+            .Include(recipe => recipe.CreatedByUser)
+            .Include(recipe => recipe.Ingredients)
+            .FirstOrDefaultAsync(
+                recipe => recipe.CreatedByUserId == ownerId && recipe.IdempotencyKey == idempotencyKey,
+                cancellationToken);
+    }
+
     public async Task AddAsync(Recipe recipe, CancellationToken cancellationToken)
     {
         await dbContext.Recipes.AddAsync(recipe, cancellationToken);
+    }
+
+    // Detaching does not cascade, so the ingredients added with the recipe are detached one by one.
+    // Iterates over a copy: EF removes each detached ingredient from recipe.Ingredients.
+    public void Detach(Recipe recipe)
+    {
+        foreach (var ingredient in recipe.Ingredients.ToList())
+        {
+            dbContext.Entry(ingredient).State = EntityState.Detached;
+        }
+
+        dbContext.Entry(recipe).State = EntityState.Detached;
     }
 
     // One DELETE statement with no prior read, so nothing can change in between. The database's
