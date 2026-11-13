@@ -1,12 +1,19 @@
 import { screen, waitFor } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiBaseUrl } from "@/features/auth/lib/auth-config";
 import { CreateRecipeForm } from "@/features/recipes/components/create-recipe-form";
 import type { CreateRecipeRequest, RecipeResponse } from "@/features/recipes/types/recipe";
 import { renderWithProviders } from "@/test/render-with-providers";
 import { server } from "@/test/server";
+
+// vi.mock is moved above the imports, so the mock function must be created with vi.hoisted.
+const { routerReplace } = vi.hoisted(() => ({ routerReplace: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: routerReplace }),
+}));
 
 const recipesUrl = `${apiBaseUrl}/api/recipes`;
 
@@ -29,6 +36,10 @@ const fillIngredientAndStep = async (user: UserEvent) => {
 };
 
 describe("CreateRecipeForm", () => {
+  beforeEach(() => {
+    routerReplace.mockClear();
+  });
+
   it("shows a title error, sends no request and keeps the input when the title is empty", async () => {
     let createRequestCount = 0;
     server.use(
@@ -41,7 +52,7 @@ describe("CreateRecipeForm", () => {
     const { user } = renderWithProviders(<CreateRecipeForm />);
 
     await fillIngredientAndStep(user);
-    await user.click(screen.getByRole("button", { name: "Skapa recept" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ange en titel.");
     expect(createRequestCount).toBe(0);
@@ -62,7 +73,7 @@ describe("CreateRecipeForm", () => {
 
     await user.type(screen.getByLabelText("Titel"), "Lasagne");
     await fillIngredientAndStep(user);
-    await user.click(screen.getByRole("button", { name: "Skapa recept" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Något gick fel när receptet skulle skapas. Försök igen.",
@@ -71,7 +82,7 @@ describe("CreateRecipeForm", () => {
     expect(screen.getByLabelText("Ingrediens")).toHaveValue("Pasta");
     expect(screen.getByLabelText("Steg 1")).toHaveValue("Koka pastan");
 
-    const saveButton = screen.getByRole("button", { name: "Skapa recept" });
+    const saveButton = screen.getByRole("button", { name: "Spara" });
     expect(saveButton).toBeEnabled();
 
     // The server has recovered, so the same input can be sent again.
@@ -84,7 +95,7 @@ describe("CreateRecipeForm", () => {
     );
     await user.click(saveButton);
 
-    await waitFor(() => expect(screen.getByLabelText("Titel")).toHaveValue(""));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     // The first attempt may have reached the server, so the retry must be recognised as the same attempt.
@@ -93,7 +104,7 @@ describe("CreateRecipeForm", () => {
     expect(sentKeys[1]).toBe(sentKeys[0]);
   });
 
-  it("uses a new key for the next recipe after a successful save", async () => {
+  it("navigates to the start page after a successful save and uses a new key the next time", async () => {
     const sentKeys: (string | null)[] = [];
     server.use(
       http.post(recipesUrl, ({ request }) => {
@@ -102,13 +113,16 @@ describe("CreateRecipeForm", () => {
         return HttpResponse.json(createdRecipe, { status: 201 });
       }),
     );
-    const { user } = renderWithProviders(<CreateRecipeForm />);
 
+    // Each save happens in a newly opened form, as after navigating back to "Nytt recept".
     for (const title of ["Lasagne", "Pannkakor"]) {
+      const { user, unmount } = renderWithProviders(<CreateRecipeForm />);
       await user.type(screen.getByLabelText("Titel"), title);
       await fillIngredientAndStep(user);
-      await user.click(screen.getByRole("button", { name: "Skapa recept" }));
-      await waitFor(() => expect(screen.getByLabelText("Titel")).toHaveValue(""));
+      await user.click(screen.getByRole("button", { name: "Spara" }));
+      await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/"));
+      unmount();
+      routerReplace.mockClear();
     }
 
     expect(sentKeys).toHaveLength(2);
@@ -130,14 +144,14 @@ describe("CreateRecipeForm", () => {
 
     await user.type(screen.getByLabelText("Titel"), "Lasagne");
     await fillIngredientAndStep(user);
-    await user.click(screen.getByRole("button", { name: "Skapa recept" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ett tidigare försök kan redan ha sparat receptet.");
     expect(screen.getByLabelText("Titel")).toHaveValue("Lasagne");
 
-    await user.click(screen.getByRole("button", { name: "Skapa recept" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
-    await waitFor(() => expect(screen.getByLabelText("Titel")).toHaveValue(""));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/"));
     expect(sentKeys).toHaveLength(2);
     expect(sentKeys[1]).not.toBe(sentKeys[0]);
   });
@@ -158,10 +172,10 @@ describe("CreateRecipeForm", () => {
 
     await user.type(screen.getByLabelText("Titel"), "Lasagne");
     await fillIngredientAndStep(user);
-    await user.click(screen.getByRole("button", { name: "Skapa recept" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
-    // The form resets in onSuccess, so an empty title means the whole flow has finished.
-    await waitFor(() => expect(screen.getByLabelText("Titel")).toHaveValue(""));
+    // The navigation happens in onSuccess, so it means the whole flow has finished.
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/"));
 
     expect(requestBody).toEqual({
       title: "Lasagne",
@@ -170,5 +184,14 @@ describe("CreateRecipeForm", () => {
       ingredients: [{ name: "Pasta", amount: null, unit: null }],
     });
     expect(authorization).toBe("Bearer test-token");
+  });
+
+  it("lets the unit be typed in lower case on phones", async () => {
+    renderWithProviders(<CreateRecipeForm />);
+
+    const unitInput = await screen.findByLabelText("Enhet");
+    expect(unitInput).toHaveAttribute("autocapitalize", "none");
+    expect(unitInput).toHaveAttribute("autocorrect", "off");
+    expect(unitInput).toHaveAttribute("spellcheck", "false");
   });
 });

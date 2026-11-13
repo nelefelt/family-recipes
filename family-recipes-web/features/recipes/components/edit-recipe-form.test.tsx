@@ -63,7 +63,7 @@ describe("EditRecipeForm", () => {
 
     await user.clear(titleInput);
     await user.type(titleInput, "Ny titel");
-    await user.click(screen.getByRole("button", { name: "Spara ändringar" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith(`/recipes/${recipeId}`));
     expect(requestBody).toEqual({
@@ -105,7 +105,7 @@ describe("EditRecipeForm", () => {
 
     expect(screen.getByLabelText("Titel")).toHaveValue("Min ändring");
 
-    await user.click(screen.getByRole("button", { name: "Spara ändringar" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
     await waitFor(() => expect(requestBody?.version).toBe(existingRecipe.version));
   });
@@ -131,7 +131,7 @@ describe("EditRecipeForm", () => {
     await user.clear(titleInput);
     await user.type(titleInput, "Min ändring");
     storedRecipe = changedElsewhere;
-    await user.click(screen.getByRole("button", { name: "Spara ändringar" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
     expect(await screen.findByText(/Receptet har ändrats sedan du öppnade det/)).toBeInTheDocument();
     expect(screen.getByLabelText("Titel")).toHaveValue("Min ändring");
@@ -141,7 +141,7 @@ describe("EditRecipeForm", () => {
     await waitFor(() => expect(screen.getByLabelText("Titel")).toHaveValue("Titel från annan flik"));
     expect(screen.queryByText(/Receptet har ändrats sedan du öppnade det/)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Spara ändringar" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith(`/recipes/${recipeId}`));
     expect(savedVersions).toEqual([existingRecipe.version, changedElsewhere.version]);
@@ -166,18 +166,18 @@ describe("EditRecipeForm", () => {
     const { user } = renderWithProviders(<EditRecipeForm recipeId={recipeId} />);
 
     await screen.findByLabelText("Titel");
-    await user.click(screen.getByRole("button", { name: "Spara ändringar" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
     await screen.findByRole("button", { name: "Ladda senaste versionen" });
 
     delayRecipeRequests = true;
     await user.click(screen.getByRole("button", { name: "Ladda senaste versionen" }));
 
     expect(await screen.findByRole("button", { name: "Hämtar..." })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Spara ändringar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Spara" })).toBeDisabled();
 
     releaseReload();
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Spara ändringar" })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Spara" })).toBeEnabled());
   });
 
   it("starts a new edit session when switching to another recipe", async () => {
@@ -212,7 +212,7 @@ describe("EditRecipeForm", () => {
     const titleInput = await screen.findByLabelText("Titel");
     await user.clear(titleInput);
     await user.type(titleInput, "Min ändring");
-    await user.click(screen.getByRole("button", { name: "Spara ändringar" }));
+    await user.click(screen.getByRole("button", { name: "Spara" }));
     await screen.findByRole("button", { name: "Ladda senaste versionen" });
 
     failRecipeRequests = true;
